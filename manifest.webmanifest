@@ -1,7 +1,7 @@
 {
   "name": "AGE Club",
   "short_name": "AGE Club",
-  "description": "AGE Club — Prototipo UX V4 (fase 01). Confidencial.",
+  "description": "AGE Club — Prototipo V5 (fase 01). Confidencial.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

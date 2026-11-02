@@ -140,3 +140,35 @@ var CATEGORIES = [
   { id: 'glow',    name: 'Skinbooster Glow', line: 'Skinbooster cuatro veces al año, con regalos', plans: ['skinbooster-glow'] },
   { id: 'premium', name: 'Premium',          line: 'Un tratamiento o servicio en cada uno de los 12 meses', plans: ['premium'] }
 ];
+
+/* V5 · Exclusivo para socios. Promociones de tratamientos adicionales, independientes de lo incluido en cada membresía.
+   Para añadir una promoción, añade un objeto; para retirarla, cambia status a 'retirada' o bórrala.
+   status: 'ejemplo' (se muestra marcada como ejemplo) | 'aprobada' | 'retirada' (no se muestra).
+   key: clave del catálogo; la app la cruza con el plan activo para indicar si el tratamiento ya está incluido.
+   price.regular / price.member: importe en euros o null (sin confirmar). El descuento solo se muestra si ambos existen.
+   plans: 'all' o lista de ids de plan a los que se ofrece. validFrom / validTo: 'AAAA-MM-DD' o null. */
+var PROMOS = [
+  { id: 'hifu', status: 'ejemplo', key: 'hifu', name: 'HIFU', summary: null,
+    image: { src: 'img/promo-hifu.jpg', alt: 'Profesional realizando un tratamiento con aparatología en una cabina de AGE Clinic', source: 'DSCF0282.jpeg' },
+    price: { regular: null, member: null }, conditions: [], plans: 'all', validFrom: null, validTo: null },
+  { id: 'peeling', status: 'ejemplo', key: 'peeling-higiene', name: 'Peeling / higiene', summary: null,
+    image: { src: 'img/promo-peel.jpg', alt: 'Aplicación de un producto con pincel sobre la piel de un paciente', source: 'DSCF9956.jpeg' },
+    price: { regular: null, member: null }, conditions: [], plans: 'all', validFrom: null, validTo: null },
+  { id: 'labios', status: 'ejemplo', key: 'labios-contorno', name: 'Labios + contorno', summary: null,
+    image: { src: 'img/promo-labios.jpg', alt: 'Preparación de los labios de una paciente antes del tratamiento', source: 'DSCF0379.jpeg' },
+    price: { regular: null, member: null }, conditions: [], plans: 'all', validFrom: null, validTo: null }
+];
+
+/* V5 · Fotografías reales de AGE Clinic (carpeta Imagenes_Clinica), recortadas y optimizadas para web. */
+var PHOTOS = {
+  bienvenida: ['img/bienvenida.jpg', 'Paciente relajada con los ojos cerrados en una camilla de AGE Clinic'],
+  inicio: ['img/inicio.jpg', ''],
+  membresias: ['img/membresias.jpg', ''],
+  socios: ['img/socios.jpg', 'Recepción de AGE Clinic con el equipo atendiendo'],
+  reserva: ['img/reserva.jpg', 'Sala de tratamiento de AGE Clinic vista a través de un espejo en arco'],
+  activada: ['img/activada.jpg', ''],
+  perfil: ['img/perfil.jpg', ''],
+  cat: { labios: ['img/cat-labios.jpg', 'Tratamiento de labios en AGE Clinic'], botox: ['img/cat-botox.jpg', 'Infiltración en el rostro de un paciente'], glow: ['img/cat-glow.jpg', 'Paciente relajado durante un tratamiento facial'], premium: ['img/cat-premium.jpg', 'Interior de AGE Clinic con estanterías iluminadas'] },
+  tipo: { tratamiento: ['img/trat-tratamiento.jpg', 'Infiltración en el rostro de un paciente'], revision: ['img/trat-revision.jpg', 'Una profesional valora el rostro de una paciente'], regalo: ['img/trat-regalo.jpg', 'Producto de cuidado facial en manos de una profesional'], recompensa: ['img/trat-recompensa.jpg', 'Estanterías con productos en AGE Clinic'] },
+  cita: { tratamiento: ['img/cita.jpg', 'Profesional con guantes preparando un vial y una jeringa'], revision: ['img/revision.jpg', 'Una doctora revisa el rostro de una paciente'] }
+};
