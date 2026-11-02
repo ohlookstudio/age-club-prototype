@@ -254,7 +254,7 @@ function nav(title, o) {
   return '<header class="nav' + (o.over ? ' over' : '') + '"><div class="nav-l">' + left + '</div><div class="nav-t">' + esc(title || '') + '</div><div class="nav-r">' + (o.right || '') + '</div></header>';
 }
 function photo(k, cls) { var p = PHOTOS[k]; return '<img' + (cls ? ' class="' + cls + '"' : '') + ' src="' + p[0] + '" alt="' + esc(p[1]) + '"' + (p[1] ? '' : ' aria-hidden="true"') + '>'; }
-function img(p, cls) { return '<img' + (cls ? ' class="' + cls + '"' : '') + ' src="' + p[0] + '" alt="' + esc(p[1]) + '">'; }
+function img(p, cls, pos) { return '<img' + (cls ? ' class="' + cls + '"' : '') + ' src="' + p[0] + '" alt="' + esc(p[1]) + '"' + (pos ? ' style="object-position:' + pos + '"' : '') + '>'; }
 function ctaPhoto(label, attrs, tag) { tag = tag || 'button'; return '<' + tag + ' class="cta-photo"' + (attrs ? ' ' + attrs : '') + '><span class="cta-c">' + ICON.arrow + '</span>' + label + '</' + tag + '>'; }
 function avatar() { return S.user && S.user.email === DEMO.user.email ? '<span class="av av-ph" aria-hidden="true"><img src="img/lucia.jpg" alt=""></span>' : '<span class="av" aria-hidden="true">' + initials() + '</span>'; }
 function initials() { return esc((S.user.nombre || ' ')[0] + ((S.user.apellidos || '')[0] || '')); }
@@ -413,8 +413,10 @@ function catList() {
     var single = c.plans.length === 1, target = single ? go('plan', { id: c.plans[0] }) : go('categoria', { cat: c.id });
     var price = (single ? '' : 'Desde ') + priceM(c.plans[0]), ph = PHOTOS.cat[c.id];
     var mine = S.member && c.plans.indexOf(S.member.plan) > -1 ? '<span class="tag">Tu plan</span>' : '';
-    if (c.id === 'premium') return '<article class="cat-prem">' + img(ph) + '<div class="cat-top"><span class="cat-n">' + c.name + mine + '</span><span class="cat-l">' + esc(c.line) + '</span><span class="cat-p">' + price + '</span></div>' + ctaPhoto('Lo quiero todo', target) + '</article>';
-    return '<button class="cat" ' + target + '><span class="cat-t"><span class="cat-n">' + c.name + mine + '</span><span class="cat-l">' + esc(c.line) + '</span><span class="cat-p">' + price + '</span></span><img class="cat-img" src="' + ph[0] + '" alt=""></button>';
+    var pr = '<span class="cat-pr">' + (single ? '' : '<span class="cat-from">Desde</span>') + '<span class="cat-p">' + priceM(c.plans[0]).replace(' €/mes', ' <small>€/mes</small>') + '</span></span>';
+    var nm = '<span class="cat-n">' + c.name + mine + '</span>', txt = '<span class="cat-t"><span class="cat-l">' + esc(c.line) + '</span></span>';
+    if (c.id === 'premium') return '<button class="mcard cat-prem" ' + target + '>' + img(ph, 'mcard-img', ph[2]) + '<span class="mcard-in"><span class="mcard-txt">' + nm + '<span class="mcard-row">' + txt + pr + '</span></span>' + ctaPhoto('Lo quiero todo', '', 'span') + '</span></button>';
+    return '<button class="mcard cat" ' + target + '>' + img(ph, 'mcard-img', ph[2]) + '<span class="mcard-in"><span class="mcard-txt">' + nm + '<span class="mcard-row">' + txt + '<span class="cat-go">' + pr + ICON.chev + '</span></span></span></span></button>';
   }).join('') + '</div>';
 }
 SCR.membresias = function () {
@@ -426,7 +428,7 @@ function incName(k, n) { return esc(CATALOG[k].name) + (n > 1 ? ' <span class="i
 SCR.categoria = function (pp) {
   var c = CAT[pp.cat], cnt = c.plans.map(function (pid) { return keyCounts(pid); });
   var common = Object.keys(cnt[0]).filter(function (k) { return cnt[1][k] === cnt[0][k]; });
-  var h = nav(c.name, { over: true }) + '<div class="hero short">' + img(PHOTOS.cat[c.id]) + '</div><div class="body sheetbody"><div class="stack"><span class="kicker">Membresía</span><h1>' + c.name + '</h1><p class="lead">' + esc(c.line) + '.</p></div>';
+  var h = nav(c.name, { over: true }) + '<div class="hero short">' + img(PHOTOS.cat[c.id], '', PHOTOS.cat[c.id][3]) + '</div><div class="body sheetbody"><div class="stack"><span class="kicker">Membresía</span><h1>' + c.name + '</h1><p class="lead">' + esc(c.line) + '.</p></div>';
   h += '<div class="common"><span class="lbl">En común en los dos planes</span><span>' + common.map(function (k) { return incName(k, cnt[0][k]); }).join(' · ') + '</span></div>';
   h += '<div class="stack">' + c.plans.map(function (pid, i) {
     var p = PLAN[pid], mine = S.member && S.member.plan === pid ? '<span class="tag">Tu plan</span>' : '';
@@ -451,7 +453,7 @@ function accSec(id, title, meta, body) {
 }
 SCR.plan = function (pp) {
   var p = PLAN[pp.id], k = counts(p.id), mine = S.member && S.member.plan === p.id, cat = catOf(p.id), prem = p.id === 'premium';
-  var h = nav(p.name, { over: true }) + '<div class="hero">' + img(PHOTOS.cat[cat.id]) + '</div><div class="body sheetbody"><div><span class="kicker">Membresía · ' + cat.name + (mine ? ' · tu plan actual' : '') + '</span><h1 style="margin-top:10px">' + esc(p.name) + '</h1><div class="price">' + priceM(p.id) + '</div><p class="lead" style="margin-top:8px">Recorrido de 12 meses desde la activación.</p></div>';
+  var h = nav(p.name, { over: true }) + '<div class="hero">' + img(PHOTOS.cat[cat.id], '', PHOTOS.cat[cat.id][3]) + '</div><div class="body sheetbody"><div><span class="kicker">Membresía · ' + cat.name + (mine ? ' · tu plan actual' : '') + '</span><h1 style="margin-top:10px">' + esc(p.name) + '</h1><div class="price">' + priceM(p.id) + '</div><p class="lead" style="margin-top:8px">Recorrido de 12 meses desde la activación.</p></div>';
   h += '<div class="stats">' + ['tratamiento', 'revision', 'regalo', 'recompensa'].map(function (t) {
     return '<div class="stat">' + glyph(t, null, 18) + '<b>' + (t === 'recompensa' ? (k[t] ? 'Sí' : '—') : k[t]) + '</b><span>' + (t === 'recompensa' ? 'Rewards' : TYPES[t].plural) + '</span></div>';
   }).join('') + '</div>';
@@ -517,7 +519,8 @@ SCR.bienvenida = function () {
   var h = '<div class="welcome">' + photo('bienvenida', 'wl-bg') + '<img class="wl-logo" src="brand/Logo_Club-AgeClinic_White.png" alt="AGE Club · AGE Clinic">' +
     '<div class="wl-mid"><h1 class="wl-h">Una nueva forma de llevarte al <b>siguiente nivel</b>.</h1><p class="lead">Tu membresía de medicina estética, con un recorrido de 12 meses.</p></div>' +
     '<div class="wl-act">' + ctaPhoto('Explorar membresías', 'data-join ' + go('membresias')) +
-    '<div class="wl-sec"><button class="link" ' + go('registro') + '>Crear cuenta</button><span aria-hidden="true">·</span><button class="link wl-login" ' + go('login') + '>Iniciar sesión</button></div></div></div>';
+    '<button class="btn-line" ' + go('registro') + '>Crear cuenta</button>' +
+    '<p class="wl-sec">¿Ya tienes cuenta? <button class="link wl-login" ' + go('login') + '>Iniciar sesión</button></p></div></div>';
   return { html: h, flow: true };
 };
 function fieldHtml(id, label, type, ac, hint) {

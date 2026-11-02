@@ -161,14 +161,15 @@ var PROMOS = [
 
 /* V5 · Fotografías reales de AGE Clinic (carpeta Imagenes_Clinica), recortadas y optimizadas para web. */
 var PHOTOS = {
-  bienvenida: ['img/bienvenida.jpg', 'Paciente relajada con los ojos cerrados en una camilla de AGE Clinic'],
+  bienvenida: ['img/ageclub_bienvenida.jpg', 'Mano apoyada en el rostro de una mujer'],
   inicio: ['img/inicio.jpg', ''],
   membresias: ['img/membresias.jpg', ''],
   socios: ['img/socios.jpg', 'Recepción de AGE Clinic con el equipo atendiendo'],
   reserva: ['img/reserva.jpg', 'Sala de tratamiento de AGE Clinic vista a través de un espejo en arco'],
   activada: ['img/activada.jpg', ''],
   perfil: ['img/perfil.jpg', ''],
-  cat: { labios: ['img/cat-labios.jpg', 'Tratamiento de labios en AGE Clinic'], botox: ['img/cat-botox.jpg', 'Infiltración en el rostro de un paciente'], glow: ['img/cat-glow.jpg', 'Paciente relajado durante un tratamiento facial'], premium: ['img/cat-premium.jpg', 'Interior de AGE Clinic con estanterías iluminadas'] },
+  /* [src, alt, encuadre en tarjeta, encuadre en cabecera] */
+  cat: { labios: ['img/ageclub_labios.jpg', 'Detalle de unos labios', '50% 42%', '50% 45%'], botox: ['img/ageclub_botox.jpg', 'Retrato de un hombre de perfil', '50% 30%', '50% 30%'], glow: ['img/ageclub_skinbooster.jpg', 'Rostro de una mujer con la piel luminosa', '50% 22%', '50% 25%'], premium: ['img/ageclub_premium.jpg', 'Detalle de una mirada', '0% 50%', '30% 50%'] },
   tipo: { tratamiento: ['img/trat-tratamiento.jpg', 'Infiltración en el rostro de un paciente'], revision: ['img/trat-revision.jpg', 'Una profesional valora el rostro de una paciente'], regalo: ['img/trat-regalo.jpg', 'Producto de cuidado facial en manos de una profesional'], recompensa: ['img/trat-recompensa.jpg', 'Estanterías con productos en AGE Clinic'] },
   cita: { tratamiento: ['img/cita.jpg', 'Profesional con guantes preparando un vial y una jeringa'], revision: ['img/revision.jpg', 'Una doctora revisa el rostro de una paciente'] }
 };
