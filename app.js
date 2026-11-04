@@ -71,7 +71,7 @@ function freshUI() {
 var ACCOUNTS = [];          /* cuentas creadas en esta sesión (simuladas, solo en memoria) */
 var DEMO_SNAP = null;       /* estado guardado de la cuenta de prueba al cerrar sesión */
 function reset() {
-  S = { auth: { email: DEMO.user.email }, member: null, items: {}, log: [], archive: [], readNotifs: false, scenario: 'nuevo',
+  S = { auth: { email: DEMO.user.email }, member: null, items: {}, log: [], archive: [], readNotifs: false, readGeneral: false, scenario: 'nuevo',
     user: JSON.parse(JSON.stringify(DEMO.user)),
     prefs: { recordatorios: true, pendientes: true, beneficios: true, fechas: true, email: false },
     stack: [{ r: 'inicio', p: {} }], ui: freshUI(), capture: false, promoReqs: {} };
@@ -116,29 +116,36 @@ function scenario(name) {
     var c6 = monthComps('botox-essential', 6)[0];
     S.items[c6.id] = { status: 'reservado', appt: { date: D(2026, 9, 29), time: '11:30' } };
     var c2 = monthComps('botox-essential', 2)[0];
-    S.log.push({ label: c2.label, type: c2.type, m: 2, plan: 'Botox Essential', date: addD(mStart(2), 2), time: '10:30', kind: 'cancelada' });
+    S.log.push({ label: c2.label, type: c2.type, m: 2, plan: PLAN['botox-essential'].name, date: addD(mStart(2), 2), time: '10:30', kind: 'cancelada' });
     if (name === 'botox5') setCycle(5);
   }
   if (name === 'premium') { S.member = { plan: 'premium', act: addM(BASE, -5), cycle: 6 }; derive(); }
 }
 
 /* ---------- acciones de dominio ---------- */
-function book(id, date, time) { var it = S.items[id]; it.status = 'reservado'; it.appt = { date: date, time: time }; delete it.change; }
-function requestChange(id, date, time) { var it = S.items[id]; it.status = 'cambio'; it.change = { date: date, time: time }; }
+function book(id, date, time, dur) { var it = S.items[id]; it.status = 'reservado'; it.appt = { date: date, time: time, dur: dur || durOptions(COMP[id])[0] }; }
+/* V5.5 · El cambio de cita es directo: no hay solicitud ni aprobación de la clínica (confirmación simulada). */
+function modifyAppt(id, date, time, dur) { var it = S.items[id]; S.ui.lastChange = { id: id, from: it.appt }; it.appt = { date: date, time: time, dur: dur || it.appt.dur || durOptions(COMP[id])[0] }; it.status = 'reservado'; }
+function isFuture(c) { return !!S.member && c.m > S.member.cycle; }
 function cancelAppt(id) {
   var it = S.items[id], c = COMP[id];
   S.log.push({ label: c.label, type: c.type, m: c.m, plan: PLAN[c.plan].name, date: it.appt.date, time: it.appt.time, kind: 'cancelada' });
-  it.status = 'pendiente'; delete it.appt; delete it.change;
+  it.status = isFuture(c) ? 'previsto' : 'pendiente'; delete it.appt;
 }
-function completeAppt(id) { var it = S.items[id]; it.status = 'completado'; it.doneAt = it.appt.date; it.time = it.appt.time; delete it.appt; delete it.change; }
-function confirmChange(id) { var it = S.items[id]; it.appt = it.change; delete it.change; it.status = 'reservado'; }
+function completeAppt(id) { var it = S.items[id]; it.status = 'completado'; it.doneAt = it.appt.date; it.time = it.appt.time; delete it.appt; }
+/* V5.5 · Duración: reglas editables en DURATIONS (data.js), pendientes de confirmar. */
+function durOptions(c) { var bp = DURATIONS.byPlan[c.plan] || {}; return (bp[c.key] || bp['default'] || DURATIONS.byKey[c.key] || DURATIONS['default']).slice(); }
+function addMin(t, n) { var a = t.split(':'), m = +a[0] * 60 + +a[1] + n; return (m < 600 ? '0' : '') + Math.floor(m / 60) + ':' + (m % 60 < 10 ? '0' : '') + (m % 60); }
+function apptDur(c) { var it = item(c.id); return (it && it.appt && it.appt.dur) || durOptions(c)[0]; }
+function timeRange(time, dur) { return time + '–' + addMin(time, dur); }
+function durLong(min) { var n = Math.round(min / DURATIONS.slot); return min + ' min' + (n > 1 ? ' · ' + n + ' espacios de ' + DURATIONS.slot + ' min' : ''); }
 function redeem(id) { var it = S.items[id]; it.status = 'canjeado'; it.doneAt = today(); }
 
 /* ---------- consultas ---------- */
 function plannedComps() { return S.member ? COMPS[S.member.plan] : []; }
 function byStatus(sts) { return plannedComps().filter(function (c) { return sts.indexOf(item(c.id).status) > -1; }); }
 function upcomingAppts() {
-  return byStatus(['reservado', 'cambio']).sort(function (a, b) { return item(a.id).appt.date - item(b.id).appt.date; });
+  return byStatus(['reservado']).sort(function (a, b) { return item(a.id).appt.date - item(b.id).appt.date; });
 }
 function nextMonthWith(after, pid) {
   pid = pid || S.member.plan;
@@ -159,7 +166,6 @@ function notifs() {
   plannedComps().forEach(function (c) {
     var it = item(c.id), st = it.status;
     if (p.recordatorios && st === 'reservado') out.push({ i: 'cal', t: 'Recordatorio de cita', x: c.label + ' · ' + fDay(it.appt.date) + ', ' + it.appt.time + '.', a: go('cita', { id: c.id }) });
-    if (p.recordatorios && st === 'cambio') out.push({ i: 'cal', t: 'Cambio pendiente de confirmar', x: 'Has pedido mover ' + c.label + ' al ' + fDay(it.change.date) + '. La clínica debe confirmarlo.', a: go('cita', { id: c.id }) });
     if (p.pendientes && st === 'pendiente') out.push({ i: 'pend', t: 'Pendiente de reservar', x: c.label + ' corresponde al Mes ' + c.m + ' de tu recorrido.', a: go('reservar-2', { id: c.id }) });
     if (p.beneficios && st === 'disponible') out.push({ i: 'gift', t: CATALOG[c.key].name + ' disponible', x: 'Mes ' + c.m + '. La forma de canje está por confirmar.', a: go('beneficio', { id: c.id }) });
   });
@@ -179,17 +185,24 @@ function historyEntries(onlyClinical) {
   else out = out.filter(function (e) { return clinical(e.type); });
   return out.sort(function (a, b) { return b.date - a.date; });
 }
-function slotDays() {
+function slotDays(c) {
   var out = [], d = addD(today(), 1);
+  if (c && isFuture(c) && mStart(c.m) > d) d = mStart(c.m);   // reserva anticipada: la fecha cae dentro del mes previsto
   while (out.length < 12) { if (d.getDay() !== 0) out.push(d); d = addD(d, 1); }
   return out;
 }
 function slotTaken(day, ti) { return ((day.getDate() * 7 + ti * 3) % 5) === 0; }
+/* Una cita de N min necesita N/30 espacios consecutivos libres en la agenda DEMO. */
+function slotFree(day, ti, dur) {
+  var n = Math.round(dur / DURATIONS.slot);
+  for (var j = 0; j < n; j++) { var t = DEMO.times[ti + j]; if (!t || t !== addMin(DEMO.times[ti], j * DURATIONS.slot) || slotTaken(day, ti + j)) return false; }
+  return true;
+}
 
 /* ---------- estados y glifos ---------- */
 var ST = {
   previsto: { l: 'Previsto', c: 'prev' }, pendiente: { l: 'Pendiente de reservar', c: 'pend' },
-  reservado: { l: 'Reservado', c: 'res' }, cambio: { l: 'Cambio solicitado', c: 'cambio' },
+  reservado: { l: 'Reservado', c: 'res' },
   completado: { l: 'Realizado', c: 'done' }, futuro: { l: 'Próximamente', c: 'prev' },
   disponible: { l: 'Disponible', c: 'pend' }, canjeado: { l: 'Canjeado', c: 'done' }
 };
@@ -243,7 +256,7 @@ var ICON = {
   list: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6.5h11M9 12h11M9 17.5h11M4.8 6.5v.01M4.8 12v.01M4.8 17.5v.01"></path></svg>',
   cards: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="6" width="17" height="12" rx="2.5"></rect><path d="M3.5 10h17"></path></svg>'
 };
-var NICON = { cal: ICON.cal, pend: glyph('tratamiento', 'pendiente', 22), gift: glyph('regalo', null, 22), next: ICON.route };
+var NICON = { cal: ICON.cal, pend: glyph('tratamiento', 'pendiente', 22), gift: glyph('regalo', null, 22), next: ICON.route, cards: ICON.cards, spark: ICON.spark, user: ICON.user };
 
 /* ---------- componentes reutilizables ---------- */
 function nav(title, o) {
@@ -255,7 +268,8 @@ function nav(title, o) {
 }
 function photo(k, cls) { var p = PHOTOS[k]; return '<img' + (cls ? ' class="' + cls + '"' : '') + ' src="' + p[0] + '" alt="' + esc(p[1]) + '"' + (p[1] ? '' : ' aria-hidden="true"') + '>'; }
 function img(p, cls, pos) { return '<img' + (cls ? ' class="' + cls + '"' : '') + ' src="' + p[0] + '" alt="' + esc(p[1]) + '"' + (pos ? ' style="object-position:' + pos + '"' : '') + '>'; }
-function ctaPhoto(label, attrs, tag) { tag = tag || 'button'; return '<' + tag + ' class="cta-photo"' + (attrs ? ' ' + attrs : '') + '><span class="cta-c">' + ICON.arrow + '</span>' + label + '</' + tag + '>'; }
+/* V5.7 · Pastilla beige con el texto centrado, sin círculo ni flecha (no debe parecer un control para arrastrar). */
+function ctaPhoto(label, attrs, tag) { tag = tag || 'button'; return '<' + tag + ' class="cta-photo cta-plain"' + (attrs ? ' ' + attrs : '') + '>' + label + '</' + tag + '>'; }
 function avatar() { return S.user && S.user.email === DEMO.user.email ? '<span class="av av-ph" aria-hidden="true"><img src="img/lucia.jpg" alt=""></span>' : '<span class="av" aria-hidden="true">' + initials() + '</span>'; }
 function initials() { return esc((S.user.nombre || ' ')[0] + ((S.user.apellidos || '')[0] || '')); }
 function backLabel() { var prev = S.stack[S.stack.length - 2]; if (prev && prev.r === 'categoria') return CAT[prev.p.cat].name; return prev ? (TITLES[prev.r] || 'Volver') : 'Volver'; }
@@ -285,12 +299,13 @@ function compRow(c, o) {
   o = o || {};
   var it = o.preview ? null : item(c.id), st = it ? it.status : null;
   var sub = TYPES[c.type].label + (o.month ? ' · Mes ' + c.m : '');
-  if (it && (st === 'reservado' || st === 'cambio') && it.appt) sub += ' · ' + fDay(it.appt.date) + ', ' + it.appt.time;
+  if (it && st === 'reservado' && it.appt) sub += ' · ' + fDay(it.appt.date) + ', ' + it.appt.time;
   if (it && st === 'completado' && it.doneAt) sub += ' · ' + fDate(it.doneAt);
   var cta = '';
   if (!o.noCta && it) {
     if (st === 'pendiente') cta = btn('Reservar', go('reservar-2', { id: c.id }), 'btn-sm btn-dark');
-    else if (st === 'reservado' || st === 'cambio') cta = btn('Ver cita', go('cita', { id: c.id }), 'btn-sm');
+    else if (st === 'previsto') cta = btn('Reservar', go('reservar-2', { id: c.id }), 'btn-sm');
+    else if (st === 'reservado') cta = btn('Ver cita', go('cita', { id: c.id }), 'btn-sm');
     else if (st === 'disponible') cta = btn('Ver', go('beneficio', { id: c.id }), 'btn-sm');
   }
   return '<div class="crow">' + glyph(c.type, st) + '<div class="crow-t"><div class="crow-n">' + esc(c.label) + '</div><div class="crow-s">' + esc(sub) + '</div>' + (st ? '<div class="crow-p">' + pill(st) + '</div>' : '') + '</div>' + cta + '</div>';
@@ -309,9 +324,8 @@ function apptHome(c) {
 }
 function apptCard(c, i) {
   var it = item(c.id), d = it.appt.date, ph = i === 0 ? PHOTOS.reserva : (PHOTOS.cita[c.type] || PHOTOS.cita.tratamiento);
-  var h = '<article class="rcard">' + img(ph) + '<div class="rsh"><div class="sec-h"><span class="lbl">' + cap(DIAL[d.getDay()]) + ' ' + d.getDate() + ' ' + MES[d.getMonth()] + ' · Mes ' + c.m + '</span>' + pill(it.status) + '</div><span class="rt">' + it.appt.time + '</span><h3>' + esc(c.label) + '</h3><span class="rmeta">' + ICON.pin + 'AGE Clinic ' + DEMO_TAG + '</span>';
-  if (it.status === 'cambio') h += '<p class="fine" style="margin-top:6px">Has pedido cambiarla al ' + fDay(it.change.date) + ', ' + it.change.time + '. Falta la confirmación de la clínica.</p>';
-  h += '<div class="racts">' + btn('Ver detalle', go('cita', { id: c.id }), 'btn-sm btn-dark') + (it.status === 'reservado' ? btn('Cambiar fecha', go('reservar-2', { id: c.id, mode: 'cambio' }), 'btn-sm btn-beige') : '') + '<button class="link" ' + act('sheet', 'cancel:' + c.id) + '>Cancelar</button></div></div></article>';
+  var h = '<article class="rcard">' + img(ph) + '<div class="rsh"><div class="sec-h"><span class="lbl">' + cap(DIAL[d.getDay()]) + ' ' + d.getDate() + ' ' + MES[d.getMonth()] + ' · Mes ' + c.m + '</span>' + pill(it.status) + '</div><span class="rt">' + it.appt.time + '</span><h3>' + esc(c.label) + '</h3><span class="rmeta">' + ICON.pin + 'AGE Clinic · ' + apptDur(c) + ' min ' + DEMO_TAG + '</span>';
+  h += '<div class="racts">' + btn('Ver detalle', go('cita', { id: c.id }), 'btn-sm btn-dark') + (it.status === 'reservado' ? btn('Modificar', go('reservar-2', { id: c.id, mode: 'cambio' }), 'btn-sm btn-beige') : '') + '<button class="link" ' + act('sheet', 'cancel:' + c.id) + '>Cancelar</button></div></div></article>';
   return h;
 }
 function segBar() {
@@ -325,7 +339,7 @@ function legendTypes() {
 
 /* ---------- títulos ---------- */
 var TITLES = { socios: 'Exclusivo para socios', promo: 'Promoción', categoria: 'Categoría', bienvenida: 'Bienvenida', registro: 'Crear cuenta', login: 'Iniciar sesión', inicio: 'Inicio', notificaciones: 'Notificaciones', membresias: 'Membresías', comparar: 'Comparar', plan: 'Membresía', activar: 'Activar', activada: 'Activada', cambiar: 'Cambiar plan',
-  recorrido: 'Mi recorrido', mes: 'Mes', tratamientos: 'Tratamientos', tratamiento: 'Tratamiento', 'mis-tratamientos': 'Incluidos', reservas: 'Reservas', 'reservar-1': 'Nueva reserva', 'reservar-2': 'Nueva reserva', 'reservar-3': 'Nueva reserva', 'reserva-ok': 'Reserva', cita: 'Cita',
+  recorrido: 'Mi recorrido', mes: 'Mes', tratamientos: 'Tratamientos', tratamiento: 'Tratamiento', 'mis-tratamientos': 'Incluidos', reservas: 'Reservas', 'reservar-1': 'Nueva reserva', 'reservar-2': 'Reserva', 'reservar-3': 'Reserva', 'reserva-ok': 'Reserva', cita: 'Cita',
   perfil: 'Perfil', datos: 'Datos personales', 'mi-membresia': 'Mi membresía', historial: 'Historial', beneficios: 'Beneficios', beneficio: 'Beneficio', ajustes: 'Ajustes', leyenda: 'Leyenda' };
 var FLOW = ['reservar-1', 'reservar-2', 'reservar-3', 'reserva-ok', 'activar', 'activada'];
 
@@ -347,7 +361,7 @@ function monthDots() {
   }
   return s + '</div>';
 }
-function started() { return plannedComps().some(function (c) { return ['reservado', 'completado', 'cambio', 'canjeado'].indexOf(item(c.id).status) > -1; }); }
+function started() { return plannedComps().some(function (c) { return ['reservado', 'completado', 'canjeado'].indexOf(item(c.id).status) > -1; }); }
 function headline(p, cyc) {
   var mc = monthComps(p.id, cyc);
   if (cyc === 1 && !started()) return 'Bienvenida a tu <b>mes 1</b>.';
@@ -381,7 +395,8 @@ SCR.inicio = function () {
   var nxt = [], m = cyc;
   while (nxt.length < 2 && (m = nextMonthWith(m))) nxt.push(m);
   h += '<div class="h-sec"><h2>Próximamente</h2></div>' + (nxt.length ? '<div class="list">' + nxt.map(function (n) {
-    return lrow('Mes ' + n + (S.prefs.fechas ? ' <span class="muted">· desde el ' + fDate(mStart(n)) + '</span>' : ''), esc(p.months[n - 1][0]), go('mes', { m: n }), '<span class="lockc">' + ICON.lock + '</span>');
+    var cl = monthComps(p.id, n).some(function (c) { return clinical(c.type); });
+    return lrow('Mes ' + n + (S.prefs.fechas ? ' <span class="muted">· desde el ' + fDate(mStart(n)) + '</span>' : ''), esc(p.months[n - 1][0]), go('mes', { m: n }), '<span class="lockc">' + (cl ? ICON.cal : ICON.lock) + '</span>');
   }).join('') + '</div>' : '<p class="neutral">Es el último mes con actividades de tu ciclo. La renovación está por confirmar.</p>');
   if (activePromos().length) h += '<button class="excl" ' + go('socios') + '>' + photo('socios') + '<span class="excl-k">Exclusivo para socios</span><span class="excl-t">Tratamientos adicionales para socios</span>' + ctaPhoto('Ver promociones', '', 'span') + '</button>';
   h += '<p class="fine">Actos clínicos = tratamientos y revisiones. Los regalos y Rewards se cuentan aparte.</p>';
@@ -395,6 +410,14 @@ function inicioVisitante() {
 }
 
 SCR.notificaciones = function () {
+  if (!S.auth) {   // V5.5 · antes del login: solo avisos generales, sin datos personales
+    var g = GENERAL_NOTIFS, gh = nav('Notificaciones', { right: S.readGeneral ? '' : '<button class="link" ' + act('readAll') + '>Marcar leídas</button>' }) + '<div class="body"><h1><b>Notificaciones</b></h1>';
+    gh += '<p class="fine">Avisos generales de ejemplo · ' + DEMO_TAG + '</p><div class="list">' + g.map(function (n) {
+      var inner = '<span class="nrow-i">' + NICON[n.i] + '</span><span class="lrow-t"><span class="lrow-n">' + esc(n.t) + '</span><span class="lrow-s">' + esc(n.x) + '</span></span>' + (S.readGeneral ? '' : '<span class="dot" aria-label="Sin leer"></span>');
+      return n.go ? '<button class="nrow' + (S.readGeneral ? ' read' : '') + '" ' + go(n.go) + '>' + inner + '</button>' : '<div class="nrow' + (S.readGeneral ? ' read' : '') + '">' + inner + '</div>';
+    }).join('') + '</div>' + notice('Los recordatorios de tus citas y beneficios se muestran después de iniciar sesión.') + btn('Iniciar sesión', go('login'), 'btn-dark btn-block');
+    return { html: gh + '</div>' };
+  }
   var ns = notifs();
   var h = nav('Notificaciones', { right: ns.length ? '<button class="link" ' + act('readAll') + '>Marcar leídas</button>' : '' }) + '<div class="body">';
   h += '<h1><b>Notificaciones</b></h1>';
@@ -416,7 +439,7 @@ function catList() {
     var pr = '<span class="cat-pr">' + (single ? '' : '<span class="cat-from">Desde</span>') + '<span class="cat-p">' + priceM(c.plans[0]).replace(' €/mes', ' <small>€/mes</small>') + '</span></span>';
     var nm = '<span class="cat-n">' + c.name + mine + '</span>', txt = '<span class="cat-t"><span class="cat-l">' + esc(c.line) + '</span></span>';
     if (c.id === 'premium') return '<button class="mcard cat-prem" ' + target + '>' + img(ph, 'mcard-img', ph[2]) + '<span class="mcard-in"><span class="mcard-txt">' + nm + '<span class="mcard-row">' + txt + pr + '</span></span>' + ctaPhoto('Lo quiero todo', '', 'span') + '</span></button>';
-    return '<button class="mcard cat" ' + target + '>' + img(ph, 'mcard-img', ph[2]) + '<span class="mcard-in"><span class="mcard-txt">' + nm + '<span class="mcard-row">' + txt + '<span class="cat-go">' + pr + ICON.chev + '</span></span></span></span></button>';
+    return '<button class="mcard cat' + (c.line.length > 60 ? ' long' : '') + '" ' + target + '>' + img(ph, 'mcard-img', ph[2]) + '<span class="mcard-in"><span class="mcard-txt">' + nm + '<span class="mcard-row">' + txt + '<span class="cat-go">' + pr + ICON.chev + '</span></span></span></span></button>';
   }).join('') + '</div>';
 }
 SCR.membresias = function () {
@@ -516,9 +539,11 @@ SCR.cambiar = function (pp) {
 /* 0 · Acceso (simulado) */
 var BRAND_MARK = '<img class="nav-mark" src="brand/BrandMarck_Club_Black_V01.png" alt="AGE Club">';
 SCR.bienvenida = function () {
+  var gn = S.readGeneral ? 0 : GENERAL_NOTIFS.length;
   var h = '<div class="welcome">' + photo('bienvenida', 'wl-bg') + '<img class="wl-logo" src="brand/Logo_Club-AgeClinic_White.png" alt="AGE Club · AGE Clinic">' +
+    '<button class="icon-btn wl-bell" ' + go('notificaciones') + ' aria-label="Notificaciones' + (gn ? ', ' + gn + ' nuevas' : '') + '">' + ICON.bell + (gn ? '<span class="badge">' + gn + '</span>' : '') + '</button>' +
     '<div class="wl-mid"><h1 class="wl-h">Una nueva forma de llevarte al <b>siguiente nivel</b>.</h1><p class="lead">Tu membresía de medicina estética, con un recorrido de 12 meses.</p></div>' +
-    '<div class="wl-act">' + ctaPhoto('Explorar membresías', 'data-join ' + go('membresias')) +
+    '<div class="wl-act"><button class="cta-photo cta-plain" data-join ' + go('membresias') + '>Explorar membresías</button>' +
     '<button class="btn-line" ' + go('registro') + '>Crear cuenta</button>' +
     '<p class="wl-sec">¿Ya tienes cuenta? <button class="link wl-login" ' + go('login') + '>Iniciar sesión</button></p></div></div>';
   return { html: h, flow: true };
@@ -607,7 +632,7 @@ SCR.recorrido = function () {
   h += S.ui.recView === 'timeline' ? timeline(pid, pv) : calendar(pid, pv);
   return { html: h };
 };
-var SHORT = { completado: ['realizado', 'realizados'], reservado: ['reservado', 'reservados'], cambio: ['con cambio solicitado', 'con cambio solicitado'], pendiente: ['pendiente de reservar', 'pendientes de reservar'], previsto: ['previsto', 'previstos'], disponible: ['disponible', 'disponibles'], canjeado: ['canjeado', 'canjeados'], futuro: ['próximamente', 'próximamente'] };
+var SHORT = { completado: ['realizado', 'realizados'], reservado: ['reservado', 'reservados'], pendiente: ['pendiente de reservar', 'pendientes de reservar'], previsto: ['previsto', 'previstos'], disponible: ['disponible', 'disponibles'], canjeado: ['canjeado', 'canjeados'], futuro: ['próximamente', 'próximamente'] };
 function statusSummary(cs) {
   var cnt = {}, order = [];
   cs.forEach(function (c) { var st = item(c.id).status; if (!cnt[st]) { cnt[st] = 0; order.push(st); } cnt[st]++; });
@@ -634,12 +659,23 @@ function curHeadline(cs) {
 function curItem(c) {
   var it = item(c.id), st = it.status, a = '';
   if (st === 'pendiente') a = btn('Reservar', go('reservar-2', { id: c.id }), 'btn-sm btn-dark');
-  else if (st === 'reservado' || st === 'cambio') a = '<button class="link" ' + go('cita', { id: c.id }) + '>Ver cita</button>';
+  else if (st === 'reservado') a = '<button class="link" ' + go('cita', { id: c.id }) + '>Ver cita</button>';
   else if (st === 'disponible') a = btn('Ver', go('beneficio', { id: c.id }), 'btn-sm');
-  var when = it.appt && (st === 'reservado' || st === 'cambio') ? '<span class="crow-s">' + cap(fDay(it.appt.date)) + ', ' + it.appt.time + '</span>' : '';
+  var when = it.appt && st === 'reservado' ? '<span class="crow-s">' + cap(fDay(it.appt.date)) + ', ' + it.appt.time + '</span>' : '';
   return '<div class="pt-item">' + glyph(c.type, st, 22) + '<div class="crow-t"><span class="crow-n">' + esc(c.label) + '</span>' + pill(st) + when + '</div>' + a + '</div>';
 }
 function unlockText(m) { return S.prefs.fechas ? 'Se desbloquea el ' + mStart(m).getDate() + ' ' + MES[mStart(m).getMonth()] : 'Se desbloquea al empezar el Mes ' + m; }
+/* V5.5 · Tratamientos y revisiones: sin candado, con reserva anticipada. Regalos y premios: candado hasta su mes. */
+function futureLines(cs, m) {
+  var cl = cs.filter(function (c) { return clinical(c.type); }), bn = cs.filter(function (c) { return !clinical(c.type); }), out = '';
+  if (cl.length) {
+    var rs = cl.filter(function (c) { return item(c.id).status === 'reservado'; });
+    if (rs.length === cl.length) { var a = item(rs[0].id).appt; out += '<span class="lockline">' + ICON.check + 'Cita reservada · ' + cap(fDay(a.date)) + ', ' + a.time + '</span>'; }
+    else out += '<span class="lockline">' + ICON.cal + 'Puedes reservarlo ya, con fecha dentro del Mes ' + m + '</span>';
+  }
+  if (bn.length) out += '<span class="lockline">' + ICON.lock + bn.map(function (c) { return CATALOG[c.key].name; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(' y ') + ': ' + unlockText(m).charAt(0).toLowerCase() + unlockText(m).slice(1) + '</span>';
+  return out;
+}
 function timeline(pid, pv) {
   var dates = S.member && !pv && S.prefs.fechas, m, h = '<ol class="pt" aria-label="Recorrido de 12 meses">';
   function dl(n) { return dates ? '<span class="pt-d">' + fMYs(mStart(n)) + '</span>' : ''; }
@@ -687,10 +723,10 @@ function timeline(pid, pv) {
     var fs = fv.length ? typeSummary(fv) : 'Sin elementos de este tipo';
     if (m === nx) {
       var ph = fa[0].type === 'revision' ? PHOTOS.cita.revision : PHOTOS.tipo[fa[0].type];
-      h += '<li class="pt-row ph-fut ph-next"><div class="pt-next">' + row(m, img(ph) + '<span class="nsh"><span class="lbl">Lo siguiente · Mes ' + m + (dates ? ' · ' + fMYs(mStart(m)) : '') + '</span><h3>' + esc(fs) + '</h3><span class="lockline">' + ICON.lock + unlockText(m) + '</span></span>') + '</div></li>';
-    } else h += '<li class="pt-row ph-fut">' + row(m, '<span class="pt-m">Mes ' + m + '</span><span class="pt-t"><span class="pt-s">' + esc(fs) + (S.prefs.fechas ? ' · desde el ' + mStart(m).getDate() + ' ' + MES[mStart(m).getMonth()] : '') + '</span></span>' + ICON.lock.replace('class="ic"', 'class="ic lk"')) + '</li>';
+      h += '<li class="pt-row ph-fut ph-next"><div class="pt-next">' + row(m, img(ph) + '<span class="nsh"><span class="lbl">Lo siguiente · Mes ' + m + (dates ? ' · ' + fMYs(mStart(m)) : '') + '</span><h3>' + esc(fs) + '</h3>' + futureLines(fa, m) + '</span>') + '</div></li>';
+    } else h += '<li class="pt-row ph-fut">' + row(m, '<span class="pt-m">Mes ' + m + '</span><span class="pt-t"><span class="pt-s">' + esc(fs) + (S.prefs.fechas ? ' · desde el ' + mStart(m).getDate() + ' ' + MES[mStart(m).getMonth()] : '') + '</span></span>' + (fa.some(function (c) { return clinical(c.type); }) ? ICON.chev : ICON.lock.replace('class="ic"', 'class="ic lk"'))) + '</li>';
   }
-  h += '</ol><div class="rec-foot">' + notice('Hipótesis de prototipo, pendiente de validación: los tratamientos y beneficios se desbloquean al empezar su mes. No hay reservas ni canjes anticipados.', 'plain') + btn('Ver como calendario', act('recView', 'calendar'), 'btn-block') + '</div>';
+  h += '</ol><div class="rec-foot">' + notice('Tratamientos y revisiones: puedes reservarlos con antelación, con fecha dentro de su mes. Regalos y Rewards: se desbloquean al empezar su mes. Reglas pendientes de validación.', 'plain') + btn('Ver como calendario', act('recView', 'calendar'), 'btn-block') + '</div>';
   return h;
 }
 function calendar(pid, pv) {
@@ -721,7 +757,10 @@ SCR.mes = function (pp) {
   var h = nav(pv ? p.name : 'Mes ' + m) + '<div class="body"><div class="mhead"><div><div class="eyebrow">' + (m === cyc ? 'Mes actual · ' : '') + (pv ? 'Vista previa · ' + esc(p.name) : esc(p.name)) + '</div><h1>Mes <b>' + m + '</b></h1>' +
     (!pv && S.prefs.fechas ? '<div class="muted">' + fDate(mStart(m)) + ' – ' + fDate(mEnd(m)) + ' ' + DEMO_TAG + '</div>' : '<div class="muted">Mes ' + m + ' de 12 desde la activación</div>') + '</div>' +
     '<div class="mnav"><button class="icon-btn" ' + act('mesNav', m - 1) + (m === 1 ? ' disabled' : '') + ' aria-label="Mes anterior">' + ICON.prev + '</button><button class="icon-btn" ' + act('mesNav', m + 1) + (m === 12 ? ' disabled' : '') + ' aria-label="Mes siguiente">' + ICON.next + '</button></div></div>';
-  if (!pv && cs.length && m > cyc) h += notice('<b>Mes bloqueado.</b> Su contenido se desbloquea al empezar el Mes ' + m + (S.prefs.fechas ? ' (' + fDate(mStart(m)) + ', fecha simulada)' : '') + '. Hasta entonces no se puede reservar ni canjear. Hipótesis pendiente de validación.', 'warn');
+  if (!pv && cs.length && m > cyc) {
+    var hasCl = cs.some(function (c) { return clinical(c.type); }), hasBn = cs.some(function (c) { return !clinical(c.type); });
+    h += notice('<b>Mes futuro.</b> ' + (hasCl ? 'Los tratamientos y revisiones se pueden reservar con antelación, con fecha dentro de este mes. ' : '') + (hasBn ? 'Los regalos y Rewards se desbloquean al empezar el mes' + (S.prefs.fechas ? ' (' + fDate(mStart(m)) + ', fecha simulada)' : '') + '. ' : '') + 'Regla pendiente de validación.', 'plain');
+  }
   if (!cs.length) {
     var nx = nextMonthWith(m, pid);
     h += '<div class="card neutral-card"><b>Sin actividades programadas</b><p>El plan no incluye tratamientos ni beneficios este mes. No es una cita cancelada ni un tratamiento perdido.</p>' + (nx ? btn('Próximo hito: Mes ' + nx, act('mesNav', nx), 'btn-sm') : '') + '</div>';
@@ -738,15 +777,14 @@ function compCard(c, pv) {
   if (pv) h += '<p class="neutral">Incluido en el Mes ' + c.m + ' de este plan.</p>';
   else if (clinical(c.type)) {
     if (st === 'pendiente') h += '<p class="neutral">Puedes reservarlo ya. Aún no tiene cita.</p>' + btn('Reservar', go('reservar-2', { id: c.id }), 'btn-dark btn-block');
-    else if (st === 'previsto') h += '<p class="neutral">Se podrá reservar cuando empiece el Mes ' + c.m + '. Regla de reserva por confirmar.</p>' + btn('Reservar', 'disabled', 'btn-block');
-    else if (st === 'reservado' || st === 'cambio') {
-      h += '<dl class="dl compact"><div><dt>Fecha</dt><dd>' + cap(fDay(it.appt.date)) + ' ' + it.appt.date.getFullYear() + '</dd></div><div><dt>Hora</dt><dd>' + it.appt.time + '</dd></div><div><dt>Centro</dt><dd>' + tbd(DEMO.centro) + '</dd></div></dl>';
-      if (st === 'cambio') h += notice('Has pedido cambiarla al ' + fDay(it.change.date) + ', ' + it.change.time + '. Requiere confirmación de la clínica.', 'warn');
+    else if (st === 'previsto') h += '<p class="neutral">Previsto para el Mes ' + c.m + (S.prefs.fechas ? ' (desde el ' + fDate(mStart(c.m)) + ')' : '') + '. Puedes reservar ya una fecha dentro de ese mes.</p>' + btn('Reservar con antelación', go('reservar-2', { id: c.id }), 'btn-block');
+    else if (st === 'reservado') {
+      h += '<dl class="dl compact"><div><dt>Fecha</dt><dd>' + cap(fDay(it.appt.date)) + ' ' + it.appt.date.getFullYear() + '</dd></div><div><dt>Hora</dt><dd>' + timeRange(it.appt.time, apptDur(c)) + '</dd></div><div><dt>Centro</dt><dd>' + tbd(DEMO.centro) + '</dd></div></dl>';
       h += btn('Ver cita', go('cita', { id: c.id }), 'btn-block');
     } else if (st === 'completado') h += '<p class="neutral">Realizado el ' + fDate(it.doneAt) + '. ' + DEMO_TAG + '</p>';
   } else {
     if (st === 'disponible') h += '<p class="neutral">Disponible este mes. ' + esc(cat.note || '') + '</p>' + btn('Ver beneficio', go('beneficio', { id: c.id }), 'btn-block');
-    else if (st === 'futuro') h += '<p class="neutral">Estará disponible en el Mes ' + c.m + '.</p>';
+    else if (st === 'futuro') h += '<p class="lockline">' + ICON.lock + unlockText(c.m) + '. Todavía no se puede canjear.</p>';
     else if (st === 'canjeado') h += '<p class="neutral">Canjeado el ' + fDate(it.doneAt) + '. ' + DEMO_TAG + '</p>';
   }
   h += '<button class="link" ' + go('tratamiento', { key: c.key }) + '>Ver ficha de ' + esc(cat.name) + '</button></article>';
@@ -757,19 +795,19 @@ SCR.leyenda = function () {
     [['tratamiento', 'Acto clínico programado en el plan.'], ['revision', 'Retoque, revisión o valoración.'], ['regalo', 'AGE Gift o consumición incluida.'], ['recompensa', 'Rewards. Funcionamiento por confirmar.']].map(function (r) {
       return '<div class="crow">' + glyph(r[0], null, 22) + '<div class="crow-t"><div class="crow-n">' + TYPES[r[0]].label + '</div><div class="crow-s">' + r[1] + '</div></div></div>';
     }).join('') + '</div></section><section class="sec"><h2>El relleno indica el estado</h2><div class="card tight">' +
-    [['previsto', 'Mes futuro. Todavía no se puede reservar.'], ['pendiente', 'Toca este mes y aún no tiene cita.'], ['reservado', 'Tiene cita.'], ['cambio', 'Has pedido otra fecha y falta la confirmación.'], ['completado', 'Hecho.'], ['disponible', 'Beneficio que puedes recoger.'], ['canjeado', 'Beneficio ya recogido.']].map(function (r) {
-      var t = (r[0] === 'disponible' || r[0] === 'canjeado') ? 'regalo' : 'tratamiento';
-      return '<div class="crow">' + glyph(t, r[0], 22) + '<div class="crow-t"><div class="crow-n">' + ST[r[0]].l + '</div><div class="crow-s">' + r[1] + '</div></div>' + pill(r[0]) + '</div>';
+    [['previsto', 'Mes futuro. Puedes reservarlo con antelación, con fecha dentro de su mes.'], ['pendiente', 'Toca este mes y aún no tiene cita.'], ['reservado', 'Tiene cita.'], ['completado', 'Hecho.'], ['futuro', 'Regalo o Rewards de un mes futuro. Bloqueado hasta que empiece su mes.'], ['disponible', 'Beneficio que puedes recoger.'], ['canjeado', 'Beneficio ya recogido.']].map(function (r) {
+      var t = (r[0] === 'disponible' || r[0] === 'canjeado' || r[0] === 'futuro') ? 'regalo' : 'tratamiento';
+      return '<div class="crow">' + glyph(t, r[0], 22) + '<div class="crow-t"><div class="crow-n">' + ST[r[0]].l + '</div><div class="crow-s">' + r[1] + '</div></div>' + (r[0] === 'futuro' ? '<span class="lockc sm">' + ICON.lock + '</span>' : pill(r[0])) + '</div>';
     }).join('') + '</div></section>' + notice('El estado siempre se indica también con texto. Los meses sin actividades se muestran con un punto pequeño y no significan nada pendiente.') + '</div>';
   return { html: h };
 };
 
 /* C · Tratamientos */
-var PRIO = ['pendiente', 'cambio', 'reservado', 'disponible', 'previsto', 'futuro', 'completado', 'canjeado'];
+var PRIO = ['pendiente', 'reservado', 'disponible', 'previsto', 'futuro', 'completado', 'canjeado'];
 function compTarget(c) {
   var st = item(c.id).status;
   if (st === 'pendiente') return go('reservar-2', { id: c.id });
-  if (st === 'reservado' || st === 'cambio') return go('cita', { id: c.id });
+  if (st === 'reservado') return go('cita', { id: c.id });
   if (!clinical(c.type)) return go('beneficio', { id: c.id });
   return go('mes', { m: c.m });
 }
@@ -819,7 +857,7 @@ SCR['mis-tratamientos'] = function () {
   var h = nav('Tratamientos incluidos') + '<div class="body"><h1>Tratamientos <b>incluidos</b></h1>';
   if (!S.member) return { html: h + empty('Sin membresía activa', 'Activa una membresía para ver tus tratamientos y su estado.', btn('Explorar membresías', go('membresias'), 'btn-dark')) + '</div>' };
   h += '<p class="lead">' + esc(PLAN[S.member.plan].name) + ' · actos clínicos ordenados por estado.</p>';
-  [['pendiente', 'Pendientes de reservar'], ['cambio', 'Cambio solicitado'], ['reservado', 'Reservados'], ['previsto', 'Previstos'], ['completado', 'Realizados']].forEach(function (g) {
+  [['pendiente', 'Pendientes de reservar'], ['reservado', 'Reservados'], ['previsto', 'Previstos'], ['completado', 'Realizados']].forEach(function (g) {
     var cs = byStatus([g[0]]).filter(function (c) { return clinical(c.type); });
     if (!cs.length) return;
     h += '<section class="sec"><h2>' + g[1] + ' <span class="count">' + cs.length + '</span></h2><div class="list">' + cs.map(function (c) { return lrow(esc(c.label), 'Mes ' + c.m, compTarget(c), glyph(c.type, item(c.id).status, 22)); }).join('') + '</div></section>';
@@ -833,16 +871,16 @@ function monthCal() {
   var t = today(), y = t.getFullYear(), mo = t.getMonth(), nd = new Date(y, mo + 1, 0).getDate(), off = (new Date(y, mo, 1).getDay() + 6) % 7, marks = {}, anyCh = false;
   upcomingAppts().forEach(function (c) {
     var it = item(c.id);
-    [['a', it.appt], ['ch', it.change]].forEach(function (x) { if (x[1] && x[1].date.getFullYear() === y && x[1].date.getMonth() === mo && !marks[x[1].date.getDate()]) { marks[x[1].date.getDate()] = { k: x[0], id: c.id }; if (x[0] === 'ch') anyCh = true; } });
+    var a = it.appt; if (a && a.date.getFullYear() === y && a.date.getMonth() === mo && !marks[a.date.getDate()]) marks[a.date.getDate()] = { k: 'a', id: c.id };
   });
   var h = '<div class="mcal" role="group" aria-label="' + cap(MESL[mo]) + ' ' + y + '"><div class="mcal-dow" aria-hidden="true">' + ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(function (d) { return '<span>' + d + '</span>'; }).join('') + '</div><div class="mcal-days">';
   for (var i = 0; i < off; i++) h += '<span class="e"></span>';
   for (var d = 1; d <= nd; d++) {
     var mk = marks[d], isT = d === t.getDate();
-    if (mk) h += '<button class="' + mk.k + '" ' + go('cita', { id: mk.id }) + ' aria-label="' + d + ' de ' + MESL[mo] + ': ' + (mk.k === 'a' ? 'tu cita' : 'cambio solicitado') + '">' + d + '</button>';
+    if (mk) h += '<button class="' + mk.k + '" ' + go('cita', { id: mk.id }) + ' aria-label="' + d + ' de ' + MESL[mo] + ': tu cita">' + d + '</button>';
     else h += '<span class="' + (d < t.getDate() ? 'p' : isT ? 't' : '') + '"' + (isT ? ' aria-label="Hoy, ' + d + '"' : '') + '>' + d + '</span>';
   }
-  return h + '</div></div><div class="mkey"><span><i></i>Tu cita</span>' + (anyCh ? '<span><i class="ch"></i>Cambio solicitado</span>' : '') + '<span><i class="t"></i>Hoy</span></div>';
+  return h + '</div></div><div class="mkey"><span><i></i>Tu cita</span><span><i class="t"></i>Hoy</span></div>';
 }
 SCR.reservas = function () {
   var h = '<div class="res"><div class="top-row">' + avatar() + '' + (S.member ? '<button class="icon-btn dark" ' + go('reservar-1') + ' aria-label="Nueva reserva">' + ICON.plus + '</button>' : '') + '</div><h1>Mis<br><b>reservas</b></h1>';
@@ -855,10 +893,8 @@ SCR.reservas = function () {
     if (up.length) h += '<section class="sec"><h2>' + (up.length > 1 ? 'Tus citas' : 'Tu próxima cita') + '</h2>' + up.map(apptCard).join('') + '</section>';
     else h += '<div class="card neutral-card"><b>No tienes citas próximas</b><p>' + (pend.length ? 'Tienes ' + plural(pend.length, 'tratamiento', 'tratamientos') + ' pendiente de reservar.' : 'Nada que reservar este mes.') + '</p></div>';
     if (pend.length) h += '<section class="sec"><h2>Pendientes de reservar</h2><div class="card tight">' + pend.map(function (c) { return compRow(c, { month: true }); }).join('') + '</div></section>';
-    var nm = S.member.cycle;
-    while ((nm = nextMonthWith(nm)) && !monthComps(S.member.plan, nm).some(function (c) { return clinical(c.type); })) { }
-    if (nm) { var nc = monthComps(S.member.plan, nm).filter(function (c) { return clinical(c.type); })[0];
-      h += '<button class="upnext" ' + go('mes', { m: nm }) + '>' + ICON.lock + '<span><b>' + esc(nc.label) + ' · Mes ' + nm + '</b>' + (S.prefs.fechas ? 'Podrás reservarlo desde el ' + fDate(mStart(nm)) : 'Podrás reservarlo al empezar el Mes ' + nm) + '</span></button>'; }
+    var nc = plannedComps().filter(function (c) { return clinical(c.type) && item(c.id).status === 'previsto'; })[0];
+    if (nc) h += '<button class="upnext" ' + go('reservar-2', { id: nc.id }) + '>' + ICON.cal + '<span><b>' + esc(nc.label) + ' · Mes ' + nc.m + '</b>Reserva anticipada' + (S.prefs.fechas ? ': fechas desde el ' + fDate(mStart(nc.m)) : ', con fecha dentro del Mes ' + nc.m) + '</span>' + ICON.chev + '</button>';
   } else {
     var hs = historyEntries(false);
     if (!hs.length) h += empty('Aún no hay historial', 'Aquí aparecerán tus citas realizadas y canceladas.', '');
@@ -873,47 +909,56 @@ SCR['reservar-1'] = function () {
   var h = nav('Nueva reserva', { close: true }) + '<div class="body">' + stepper(1, 'Tratamiento') + '<h1>¿Qué quieres <b>reservar</b>?</h1>';
   if (!S.member) return { html: h + empty('Sin membresía activa', 'Activa una membresía para reservar.', btn('Explorar membresías', go('membresias'), 'btn-dark')) + '</div>', flow: true };
   var pend = byStatus(['pendiente']), fut = byStatus(['previsto']);
-  if (!pend.length) h += empty('Nada que reservar ahora', 'Los tratamientos de los próximos meses se podrán reservar cuando empiece su mes.', '');
+  if (!pend.length) h += empty('Nada pendiente este mes', fut.length ? 'Puedes reservar con antelación los tratamientos de los próximos meses.' : 'No quedan tratamientos por reservar en tu ciclo.', '');
   else h += '<div class="list">' + pend.map(function (c) { return lrow(esc(c.label), TYPES[c.type].label + ' · Mes ' + c.m + ' · incluido en tu plan', go('reservar-2', { id: c.id }), glyph(c.type, 'pendiente', 22)); }).join('') + '</div>';
-  if (fut.length) h += '<section class="sec"><h2>Más adelante</h2><div class="list">' + fut.map(function (c) {
-    return '<div class="lrow disabled" aria-disabled="true">' + glyph(c.type, 'previsto', 22) + '<span class="lrow-t"><span class="lrow-n">' + esc(c.label) + '</span><span class="lrow-s">Se podrá reservar en el Mes ' + c.m + '</span></span></div>';
+  if (fut.length) h += '<section class="sec"><h2>Reserva anticipada</h2><p class="fine">La cita se fija dentro del mes en que está previsto el tratamiento.</p><div class="list">' + fut.map(function (c) {
+    return lrow(esc(c.label), TYPES[c.type].label + ' · Mes ' + c.m + (S.prefs.fechas ? ' · desde el ' + fDate(mStart(c.m)) : ''), go('reservar-2', { id: c.id }), glyph(c.type, 'previsto', 22));
   }).join('') + '</div></section>';
   return { html: h + '</div>', flow: true };
 };
 SCR['reservar-2'] = function (pp) {
   var c = COMP[pp.id], mode = pp.mode || 'nueva';
-  if (!S.ui.draft || S.ui.draft.id !== c.id || S.ui.draft.mode !== mode) S.ui.draft = { id: c.id, mode: mode, day: null, time: null };
-  var dr = S.ui.draft, days = slotDays();
-  var h = nav(mode === 'cambio' ? 'Cambiar fecha' : 'Nueva reserva', { close: true }) + '<div class="body">' + stepper(2, 'Fecha y hora') + '<h1>Elige <b>fecha y hora</b></h1>';
+  if (!S.ui.draft || S.ui.draft.id !== c.id || S.ui.draft.mode !== mode) S.ui.draft = { id: c.id, mode: mode, day: null, time: null, dur: null };
+  var dr = S.ui.draft, days = slotDays(c), opts = durOptions(c), cur = mode === 'cambio' ? item(c.id).appt : null;
+  if (opts.indexOf(dr.dur) < 0) dr.dur = cur && opts.indexOf(cur.dur) > -1 ? cur.dur : opts[0];
+  var h = nav(mode === 'cambio' ? 'Modificar cita' : 'Nueva reserva', { close: true }) + '<div class="body">' + stepper(2, 'Fecha y hora') + '<h1>Elige <b>' + (mode === 'cambio' ? 'nueva ' : '') + 'fecha y hora</b></h1>';
   h += '<div class="card tight">' + compRow(c, { noCta: true, month: true }) + '</div>';
+  if (cur) h += '<p class="fine">Cita actual: ' + cap(fDay(cur.date)) + ', ' + timeRange(cur.time, cur.dur || opts[0]) + '</p>';
+  if (isFuture(c) && mode !== 'cambio') h += notice('<b>Reserva anticipada.</b> Este tratamiento corresponde al Mes ' + c.m + ': las fechas disponibles están dentro de ese mes. Hasta cuándo se puede reservar con antelación está por confirmar.', 'plain');
+  if (opts.length > 1) h += '<div class="sec-h"><h2>Duración</h2><span class="demo-tag">Regla DEMO</span></div>' + seg(opts.map(function (o) { return [String(o), o + ' min']; }), String(dr.dur), 'pickDur') + '<p class="fine">Puedes reservar ' + opts.map(function (o) { var n = o / DURATIONS.slot; return n === 1 ? 'un espacio' : n + ' espacios consecutivos'; }).join(' o ') + ' de ' + DURATIONS.slot + ' min. Regla pendiente de confirmar con AGE Clinic.</p>';
+  else h += '<p class="fine">Duración de la cita: <b>' + dr.dur + ' min</b> · pendiente de confirmar.</p>';
   h += '<div class="sec-h"><h2>Día</h2><span class="demo-tag">Disponibilidad DEMO</span></div><div class="days" role="group" aria-label="Días">' + days.map(function (d, i) {
     return '<button class="day' + (dr.day === i ? ' on' : '') + '" aria-pressed="' + (dr.day === i) + '" ' + act('pickDay', i) + '><span>' + DIA[d.getDay()] + '</span><b>' + d.getDate() + '</b><span>' + MES[d.getMonth()] + '</span></button>';
   }).join('') + '</div>';
   h += '<div class="sec-h"><h2>Hora</h2></div>';
   if (dr.day === null) h += '<p class="neutral">Elige un día para ver las horas.</p>';
   else h += '<div class="times" role="group" aria-label="Horas">' + DEMO.times.map(function (t, i) {
-    var taken = slotTaken(days[dr.day], i);
-    return '<button class="time' + (dr.time === t ? ' on' : '') + '" ' + act('pickTime', t) + (taken ? ' disabled aria-label="' + t + ', ocupado"' : ' aria-pressed="' + (dr.time === t) + '"') + '>' + t + '</button>';
+    var isCur = cur && +cur.date === +days[dr.day] && cur.time === t, ok = !isCur && slotFree(days[dr.day], i, dr.dur);
+    var why = isCur ? 'tu cita actual' : slotTaken(days[dr.day], i) ? 'ocupado' : 'sin hueco de ' + dr.dur + ' min';
+    return '<button class="time' + (dr.time === t ? ' on' : '') + '" ' + act('pickTime', t) + (ok ? ' aria-pressed="' + (dr.time === t) + '"' : ' disabled aria-label="' + t + ', ' + why + '" title="' + why + '"') + '>' + t + '</button>';
   }).join('') + '</div>';
-  h += '<p class="fine">Disponibilidad simulada. No refleja la agenda real de la clínica.</p></div>';
+  h += '<p class="fine">Disponibilidad simulada. No refleja la agenda real de la clínica. El profesional lo asigna la clínica.</p></div>';
   h += '<div class="foot">' + btn('Continuar', go('reservar-3', { id: c.id, mode: mode }) + (dr.day !== null && dr.time ? '' : ' disabled'), 'btn-dark btn-block') + '</div>';
   return { html: h, flow: true };
 };
 SCR['reservar-3'] = function (pp) {
-  var c = COMP[pp.id], dr = S.ui.draft, d = slotDays()[dr.day], mode = pp.mode;
-  var h = nav(mode === 'cambio' ? 'Cambiar fecha' : 'Nueva reserva', { close: true }) + '<div class="body">' + stepper(3, 'Revisar') + '<h1>Revisa tu <b>reserva</b></h1>';
-  h += '<dl class="dl"><div><dt>Tratamiento</dt><dd>' + esc(c.label) + '</dd></div><div><dt>Tipo</dt><dd>' + TYPES[c.type].label + '</dd></div><div><dt>Mes del plan</dt><dd>Mes ' + c.m + ' · ' + esc(PLAN[c.plan].name) + '</dd></div><div><dt>Fecha</dt><dd>' + cap(DIAL[d.getDay()]) + ', ' + fDate(d) + '</dd></div><div><dt>Hora</dt><dd>' + dr.time + '</dd></div><div><dt>Centro</dt><dd>AGE Clinic</dd></div><div><dt>Profesional</dt><dd>Pendiente de asignar</dd></div></dl>';
-  if (mode === 'cambio') h += notice('El cambio quedará pendiente hasta que la clínica lo confirme. Mientras tanto se mantiene tu cita actual.', 'warn');
+  var c = COMP[pp.id], dr = S.ui.draft, d = slotDays(c)[dr.day], mode = pp.mode, cur = mode === 'cambio' ? item(c.id).appt : null;
+  var h = nav(mode === 'cambio' ? 'Modificar cita' : 'Nueva reserva', { close: true }) + '<div class="body">' + stepper(3, 'Revisar') + '<h1>Revisa tu <b>' + (mode === 'cambio' ? 'cambio' : 'reserva') + '</b></h1>';
+  h += '<dl class="dl"><div><dt>Tratamiento</dt><dd>' + esc(c.label) + '</dd></div><div><dt>Tipo</dt><dd>' + TYPES[c.type].label + '</dd></div><div><dt>Mes del plan</dt><dd>Mes ' + c.m + ' · ' + esc(PLAN[c.plan].name) + '</dd></div>' +
+    (cur ? '<div><dt>Cita actual</dt><dd>' + cap(fDay(cur.date)) + ', ' + timeRange(cur.time, cur.dur || durOptions(c)[0]) + '</dd></div>' : '') +
+    '<div><dt>' + (cur ? 'Nueva fecha' : 'Fecha') + '</dt><dd>' + cap(DIAL[d.getDay()]) + ', ' + fDate(d) + '</dd></div><div><dt>Hora</dt><dd>' + timeRange(dr.time, dr.dur) + '</dd></div><div><dt>Duración</dt><dd>' + durLong(dr.dur) + ' ' + DEMO_TAG + '</dd></div><div><dt>Centro</dt><dd>AGE Clinic</dd></div><div><dt>Profesional</dt><dd>' + esc(DEMO.profesional) + '</dd></div></dl>';
+  if (mode === 'cambio') h += notice('El cambio se aplica al confirmar y sustituye a tu cita actual. Confirmación simulada: no consulta la agenda real de la clínica.', 'plain');
+  else if (isFuture(c)) h += notice('<b>Reserva anticipada</b> para el Mes ' + c.m + '. El tratamiento se realiza en su mes previsto.', 'plain');
   h += notice('Incluido en tu membresía. Las condiciones de cambio y cancelación están por confirmar.') + '</div>';
-  h += '<div class="foot two-btn">' + btn('Atrás', 'data-back') + btn(mode === 'cambio' ? 'Enviar solicitud' : 'Confirmar reserva', act('confirmBook'), 'btn-dark') + '</div>';
+  h += '<div class="foot two-btn">' + btn('Atrás', 'data-back') + btn(mode === 'cambio' ? 'Confirmar cambio' : 'Confirmar reserva', act('confirmBook'), 'btn-dark') + '</div>';
   return { html: h, flow: true };
 };
 SCR['reserva-ok'] = function (pp) {
-  var c = COMP[pp.id], it = item(c.id), ch = it.status === 'cambio';
-  var a = ch ? it.change : it.appt;
-  var h = '<div class="body center-top"><div class="ok-ic">' + ICON.check + '</div><h1>' + (ch ? 'Solicitud <b>enviada</b>' : 'Reserva <b>confirmada</b>') + '</h1><p class="lead">' + esc(c.label) + ' · ' + cap(fDay(a.date)) + ', ' + a.time + ' ' + DEMO_TAG + '</p></div><div class="body">';
+  var c = COMP[pp.id], it = item(c.id), ch = pp.mode === 'cambio', a = it.appt, lc = S.ui.lastChange;
+  var h = '<div class="body center-top"><div class="ok-ic">' + ICON.check + '</div><h1>' + (ch ? 'Cita <b>modificada</b>' : 'Reserva <b>confirmada</b>') + '</h1><p class="lead">' + esc(c.label) + ' · ' + cap(fDay(a.date)) + ', ' + timeRange(a.time, apptDur(c)) + ' ' + DEMO_TAG + '</p></div><div class="body">';
   h += '<div class="card tight">' + compRow(c, { noCta: true, month: true }) + '</div>';
-  h += notice(ch ? 'La clínica tiene que confirmar el cambio. Te avisaremos (recordatorio simulado).' : 'Ya aparece en tu inicio, en Reservas y en el Mes ' + c.m + ' de tu recorrido.') + '</div>';
+  if (ch && lc && lc.id === c.id && lc.from) h += '<p class="fine">Antes: ' + cap(fDay(lc.from.date)) + ', ' + timeRange(lc.from.time, lc.from.dur || durOptions(c)[0]) + '</p>';
+  h += notice((ch ? 'Tu cita ya tiene la nueva fecha en Inicio, Reservas y el Mes ' + c.m + ' de tu recorrido. Cambio simulado: en la app real dependerá de la agenda de la clínica.' : 'Ya aparece en tu inicio, en Reservas y en el Mes ' + c.m + ' de tu recorrido.' + (isFuture(c) ? ' Es una reserva anticipada: el tratamiento sigue previsto para el Mes ' + c.m + '.' : ''))) + '</div>';
   h += '<div class="foot stack">' + btn('Ver mis reservas', act('toTab', 'reservas'), 'btn-dark btn-block') + btn('Ver en mi recorrido', act('toMes', c.m), 'btn-block') + '</div>';
   return { html: h, flow: true };
 };
@@ -923,11 +968,10 @@ SCR.cita = function (pp) {
   var d = it.appt.date;
   var h = nav('Cita', { over: true }) + '<div class="hero">' + img(PHOTOS.cita[c.type] || PHOTOS.cita.tratamiento) + '</div><div class="body sheetbody"><div class="stack"><span class="kicker">' + TYPES[c.type].label + ' · Mes ' + c.m + '</span><h1>' + esc(c.label) + '</h1>' + pill(it.status) + '</div>';
   h += '<div class="ttime"><b>' + it.appt.time + '</b><span>' + cap(DIAL[d.getDay()]) + ', ' + fDate(d) + ' · ' + DEMO_TAG + '</span></div>';
-  h += '<dl class="dl"><div><dt>Centro</dt><dd>AGE Clinic</dd></div><div><dt>Profesional</dt><dd>Pendiente de asignar</dd></div><div><dt>Plan</dt><dd>' + esc(PLAN[c.plan].name) + '</dd></div></dl>';
-  if (it.status === 'cambio') h += notice('Has pedido cambiarla al <b>' + cap(fDay(it.change.date)) + ', ' + it.change.time + '</b>. Requiere confirmación de la clínica. Hasta entonces se mantiene la fecha actual.', 'warn');
-  h += '<div class="stack">' + (it.status === 'reservado' ? btn('Solicitar cambio de fecha', go('reservar-2', { id: c.id, mode: 'cambio' }), 'btn-block btn-beige') : '') + btn('Cancelar reserva', act('sheet', 'cancel:' + c.id), 'btn-block btn-danger') + '</div>';
+  h += '<dl class="dl"><div><dt>Duración</dt><dd>' + durLong(apptDur(c)) + ' · hasta las ' + addMin(it.appt.time, apptDur(c)) + '</dd></div><div><dt>Centro</dt><dd>AGE Clinic</dd></div><div><dt>Profesional</dt><dd>' + esc(DEMO.profesional) + '</dd></div><div><dt>Plan</dt><dd>' + esc(PLAN[c.plan].name) + '</dd></div>' + (isFuture(c) ? '<div><dt>Mes del plan</dt><dd>Mes ' + c.m + ' · reserva anticipada</dd></div>' : '') + '</dl>';
+  h += '<div class="stack">' + btn('Modificar cita', go('reservar-2', { id: c.id, mode: 'cambio' }), 'btn-block btn-beige') + btn('Cancelar reserva', act('sheet', 'cancel:' + c.id), 'btn-block btn-danger') + '</div>';
   h += '<div class="demo-box"><span class="lbl">Herramientas de demostración</span><p class="fine">Simulan lo que en producción vendría del sistema de la clínica.</p>' +
-    (it.status === 'cambio' ? btn('Simular: la clínica confirma el cambio', act('confirmChange', c.id), 'btn-sm') : '') + btn('Simular: cita realizada', act('complete', c.id), 'btn-sm') + '</div>';
+    (isFuture(c) ? '<p class="fine">Disponible cuando llegue el Mes ' + c.m + '.</p>' : btn('Simular: cita realizada', act('complete', c.id), 'btn-sm')) + '</div>';
   h += '<button class="link" ' + go('tratamiento', { key: c.key }) + '>Ver ficha del tratamiento</button></div>';
   return { html: h };
 };
@@ -1031,7 +1075,7 @@ SCR.beneficio = function (pp) {
   h += '<dl class="dl"><div><dt>Mes del plan</dt><dd>Mes ' + c.m + (S.prefs.fechas ? ' · desde ' + fDate(mStart(c.m)) : '') + '</dd></div><div><dt>Cómo se canjea</dt><dd>' + tbd() + '</dd></div>' + (it.doneAt ? '<div><dt>Canjeado</dt><dd>' + fDate(it.doneAt) + ' ' + DEMO_TAG + '</dd></div>' : '') + '</dl>';
   if (cat.note) h += notice(esc(cat.note));
   if (it.status === 'disponible') h += '<div class="demo-box"><span class="lbl">Herramienta de demostración</span><p class="fine">No implica que el canje se haga desde la app.</p>' + btn('Simular: beneficio recogido', act('redeem', c.id), 'btn-sm') + '</div>';
-  if (it.status === 'futuro') h += '<p class="neutral">Estará disponible en el Mes ' + c.m + '.</p>';
+  if (it.status === 'futuro') h += '<p class="lockline">' + ICON.lock + unlockText(c.m) + '. Todavía no se puede canjear.</p>';
   return { html: h + '</div>' };
 };
 SCR.ajustes = function () {
@@ -1138,19 +1182,19 @@ function doAct(a, arg, el) {
     case 'previewPlan': S.ui.preview = (S.member && S.member.plan === arg) ? null : arg; S.ui.calSel = null; S.ui.sheet = null; S.ui.recScrolled = false; break;
     case 'previewRec': S.ui.preview = (S.member && S.member.plan === arg) ? null : arg; S.ui.calSel = null; S.ui.recView = 'calendar'; setTab('recorrido'); break;
     case 'mesNav': top.p = { m: +arg, plan: top.p.plan }; break;
-    case 'readAll': S.readNotifs = true; break;
+    case 'readAll': if (S.auth) S.readNotifs = true; else S.readGeneral = true; break;
     case 'ack': S.ui.ack = el.checked; break;
     case 'activate': activate(arg); popFlows(); push('activada'); break;
     case 'changePlan': var n = PLAN[arg].name; activate(arg); setTab('inicio'); toast('Membresía cambiada a ' + n + ' (simulación)'); break;
     case 'pickDay': S.ui.draft.day = +arg; S.ui.draft.time = null; break;
     case 'pickTime': S.ui.draft.time = arg; break;
+    case 'pickDur': S.ui.draft.dur = +arg; S.ui.draft.time = null; break;
     case 'confirmBook':
-      var dr = S.ui.draft, d = slotDays()[dr.day];
-      if (dr.mode === 'cambio') requestChange(dr.id, d, dr.time); else book(dr.id, d, dr.time);
-      S.readNotifs = false; S.ui.draft = null; popFlows(); push('reserva-ok', { id: dr.id }); break;
-    case 'cancel': cancelAppt(arg); S.ui.sheet = null; setTab('reservas'); S.ui.resTab = 'proximas'; toast('Reserva cancelada. ' + COMP[arg].label + ' vuelve a estar pendiente.'); break;
+      var dr = S.ui.draft, d = slotDays(COMP[dr.id])[dr.day];
+      if (dr.mode === 'cambio') modifyAppt(dr.id, d, dr.time, dr.dur); else book(dr.id, d, dr.time, dr.dur);
+      S.readNotifs = false; S.ui.draft = null; popFlows(); push('reserva-ok', { id: dr.id, mode: dr.mode }); break;
+    case 'cancel': cancelAppt(arg); S.ui.sheet = null; setTab('reservas'); S.ui.resTab = 'proximas'; toast('Reserva cancelada. ' + COMP[arg].label + (item(arg).status === 'previsto' ? ' sigue prevista para el Mes ' + COMP[arg].m + '.' : ' vuelve a estar pendiente.')); break;
     case 'complete': completeAppt(arg); S.stack.pop(); toast(COMP[arg].label + ' marcado como realizado'); break;
-    case 'confirmChange': confirmChange(arg); toast('Cambio confirmado por la clínica (simulación)'); break;
     case 'redeem': redeem(arg); toast('Beneficio marcado como canjeado'); break;
     case 'pref': S.prefs[arg] = !S.prefs[arg]; break;
     case 'saveDatos':
@@ -1198,7 +1242,7 @@ function doAct(a, arg, el) {
 }
 
 /* ---------- panel de demostración e inventario ---------- */
-function withDraft(sc, id, mode, day, time) { return function () { var c = COMP[id]; push('reservar-2', { id: id, mode: mode }); S.ui.draft = { id: id, mode: mode, day: day, time: time }; }; }
+function withDraft(sc, id, mode, day, time, dur) { return function () { var c = COMP[id]; push('reservar-2', { id: id, mode: mode }); S.ui.draft = { id: id, mode: mode, day: day, time: time, dur: dur || durOptions(c)[0] }; }; }
 function regTo(plan) { push('membresias'); push('categoria', { cat: catOf(plan).id }); push('plan', { id: plan }); push('registro', { plan: plan }); }
 var INV = [
   ['0', 'Acceso', [
@@ -1206,13 +1250,14 @@ var INV = [
     ['AC2', 'Crear cuenta', 'sinsesion', function () { regTo('botox-essential'); }],
     ['AC3', 'Crear cuenta · errores', 'sinsesion', function () { regTo('botox-essential'); S.ui.form = { nombre: 'Lucía', apellidos: '', email: 'lucia@', pass: '1234', terms: false }; S.ui.errs = validateReg(S.ui.form); }],
     ['AC4', 'Iniciar sesión', 'sinsesion', function () { push('login'); }],
-    ['AC5', 'Iniciar sesión · error', 'sinsesion', function () { push('login'); S.ui.form = { email: 'ana@ejemplo.com', pass: 'contraseña' }; S.ui.errs = { _form: LOGIN_ERR }; }]
+    ['AC5', 'Iniciar sesión · error', 'sinsesion', function () { push('login'); S.ui.form = { email: 'ana@ejemplo.com', pass: 'contraseña' }; S.ui.errs = { _form: LOGIN_ERR }; }],
+    ['AC6', 'Notificaciones sin sesión', 'sinsesion', function () { push('notificaciones'); }]
   ]],
   ['A', 'Membresías', [
     ['A1', '¿Qué quieres cuidar? · categorías', 'sinsesion', function () { push('membresias'); }],
     ['A2', 'Modalidades · Labios', 'sinsesion', function () { push('membresias'); push('categoria', { cat: 'labios' }); }],
-    ['A3', 'Modalidades · Bótox', 'sinsesion', function () { push('membresias'); push('categoria', { cat: 'botox' }); }],
-    ['A4', 'Ficha · Botox Essential', 'nuevo', function () { push('membresias'); push('categoria', { cat: 'botox' }); push('plan', { id: 'botox-essential' }); }],
+    ['A3', 'Modalidades · TOX', 'sinsesion', function () { push('membresias'); push('categoria', { cat: 'botox' }); }],
+    ['A4', 'Ficha · TOX Essential', 'nuevo', function () { push('membresias'); push('categoria', { cat: 'botox' }); push('plan', { id: 'botox-essential' }); }],
     ['A4b', 'Ficha · secciones desplegadas', 'nuevo', function () { push('membresias'); push('categoria', { cat: 'botox' }); push('plan', { id: 'botox-essential' }); S.ui.planOpen = { trat: true, rev: true, rec: true, cond: true }; }],
     ['A5', 'Ficha · Premium', 'nuevo', function () { push('membresias'); push('plan', { id: 'premium' }); }],
     ['A6', 'Activación · revisión', 'nuevo', function () { push('plan', { id: 'botox-essential' }); push('activar', { id: 'botox-essential' }); }],
@@ -1243,18 +1288,20 @@ var INV = [
     ['D3', 'Historial', 'botox', function () { setTab('reservas'); S.ui.resTab = 'historial'; }],
     ['D4', 'Historial · vacío', 'recien', function () { setTab('reservas'); S.ui.resTab = 'historial'; }],
     ['D5', 'Nueva reserva · tratamiento', 'premium', function () { setTab('reservas'); push('reservar-1'); }],
-    ['D6', 'Nueva reserva · fecha y hora', 'premium', function () { setTab('reservas'); push('reservar-1'); withDraft(0, 'premium|6|0', 'nueva', 4, '11:30')(); }],
-    ['D7', 'Nueva reserva · revisar', 'premium', function () { setTab('reservas'); push('reservar-1'); withDraft(0, 'premium|6|0', 'nueva', 4, '11:30')(); push('reservar-3', { id: 'premium|6|0', mode: 'nueva' }); }],
-    ['D8', 'Reserva confirmada', 'premium', function () { book('premium|6|0', slotDays()[4], '11:30'); push('reserva-ok', { id: 'premium|6|0' }); }],
+    ['D6', 'Nueva reserva · duración, fecha y hora', 'premium', function () { setTab('reservas'); push('reservar-1'); withDraft(0, 'premium|6|0', 'nueva', 4, '10:00', 60)(); }],
+    ['D7', 'Nueva reserva · revisar', 'premium', function () { setTab('reservas'); push('reservar-1'); withDraft(0, 'premium|6|0', 'nueva', 4, '10:00', 60)(); push('reservar-3', { id: 'premium|6|0', mode: 'nueva' }); }],
+    ['D8', 'Reserva confirmada', 'premium', function () { book('premium|6|0', slotDays(COMP['premium|6|0'])[4], '10:00', 60); push('reserva-ok', { id: 'premium|6|0' }); }],
     ['D9', 'Detalle de cita', 'botox', function () { setTab('reservas'); push('cita', { id: 'botox-essential|6|0' }); }],
     ['D10', 'Cancelar · confirmación', 'botox', function () { setTab('reservas'); push('cita', { id: 'botox-essential|6|0' }); S.ui.sheet = 'cancel:botox-essential|6|0'; }],
     ['D11', 'Reserva cancelada', 'botox', function () { cancelAppt('botox-essential|6|0'); setTab('reservas'); S.ui.toast = 'Reserva cancelada. Botox tercio superior vuelve a estar pendiente.'; }],
-    ['D12', 'Cambio solicitado', 'botox', function () { requestChange('botox-essential|6|0', D(2026, 10, 3), '17:00'); setTab('reservas'); push('cita', { id: 'botox-essential|6|0' }); }]
+    ['D12', 'Modificar cita · revisar', 'botox', function () { setTab('reservas'); push('cita', { id: 'botox-essential|6|0' }); withDraft(0, 'botox-essential|6|0', 'cambio', 5, '17:00')(); push('reservar-3', { id: 'botox-essential|6|0', mode: 'cambio' }); }],
+    ['D13', 'Cita modificada', 'botox', function () { modifyAppt('botox-essential|6|0', slotDays(COMP['botox-essential|6|0'])[5], '17:00', 30); setTab('reservas'); push('reserva-ok', { id: 'botox-essential|6|0', mode: 'cambio' }); }],
+    ['D14', 'Reserva anticipada · fecha y hora', 'botox', function () { setTab('recorrido'); push('mes', { m: 8 }); withDraft(0, 'botox-essential|8|0', 'nueva', 2, '10:30')(); }]
   ]],
   ['E', 'Mi recorrido', [
-    ['E1', 'Línea temporal · Botox Essential', 'botox', function () { setTab('recorrido'); }],
+    ['E1', 'Línea temporal · TOX Essential', 'botox', function () { setTab('recorrido'); }],
     ['E2', 'Línea temporal · Premium', 'premium', function () { setTab('recorrido'); }],
-    ['E3', 'Calendario · Botox Essential', 'botox', function () { setTab('recorrido'); S.ui.recView = 'calendar'; }],
+    ['E3', 'Calendario · TOX Essential', 'botox', function () { setTab('recorrido'); S.ui.recView = 'calendar'; }],
     ['E4', 'Calendario · Premium', 'premium', function () { setTab('recorrido'); S.ui.recView = 'calendar'; }],
     ['E5', 'Detalle · mes actual con cita', 'botox', function () { setTab('recorrido'); push('mes', { m: 6 }); }],
     ['E6', 'Detalle · varias acciones', 'premium', function () { setTab('recorrido'); push('mes', { m: 6 }); }],
@@ -1263,7 +1310,8 @@ var INV = [
     ['E9', 'Vista previa de otro plan', 'botox', function () { setTab('recorrido'); S.ui.preview = 'premium'; }],
     ['E10', 'Sin membresía', 'nuevo', function () { setTab('recorrido'); }],
     ['E11', 'Leyenda de estados', 'botox', function () { setTab('recorrido'); push('leyenda'); }],
-    ['E12', 'Detalle · mes futuro bloqueado', 'botox', function () { setTab('recorrido'); push('mes', { m: 8 }); }]
+    ['E12', 'Detalle · mes futuro con reserva anticipada', 'botox', function () { setTab('recorrido'); push('mes', { m: 8 }); }],
+    ['E13', 'Detalle · regalo futuro bloqueado', 'botox', function () { setTab('recorrido'); push('mes', { m: 10 }); }]
   ]],
   ['F', 'Perfil', [
     ['F1', 'Perfil', 'botox', function () { setTab('perfil'); }],
@@ -1289,7 +1337,7 @@ function show(code) {
   scenario(s.sc); if (s.fn) s.fn(); lastKey = null; S.curCode = code; render();
   var scr = document.getElementById('scr'); if (scr && !S.capture && code !== 'E1' && code !== 'E2') scr.scrollTop = 0;
 }
-var SCN = { sinsesion: 'Sin sesión · Bienvenida', nuevo: 'Con sesión · sin membresía', recien: 'Recién activada · Botox Essential', botox: 'Socia · Botox Essential, Mes 6', premium: 'Socia · Premium, Mes 6', botox5: 'Socia · Botox Essential, Mes 5' };
+var SCN = { sinsesion: 'Sin sesión · Bienvenida', nuevo: 'Con sesión · sin membresía', recien: 'Recién activada · TOX Essential', botox: 'Socia · TOX Essential, Mes 6', premium: 'Socia · Premium, Mes 6', botox5: 'Socia · TOX Essential, Mes 5' };
 function buildPanel() {
   var sc = document.getElementById('scn');
   if (sc) sc.innerHTML = ['sinsesion', 'nuevo', 'recien', 'botox', 'premium'].map(function (k) { return '<button class="pbtn" data-scn="' + k + '">' + SCN[k] + '</button>'; }).join('');

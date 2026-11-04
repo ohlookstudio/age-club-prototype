@@ -66,7 +66,7 @@ var PLANS = [
     null,
     ['Mantenimiento + Rewards', [['mantenimiento', 'Mantenimiento'], ['rewards', 'Rewards']]]
   ]},
-  { id: 'botox-essential', name: 'Botox Essential', price: '40 €', months: [
+  { id: 'botox-essential', name: 'TOX Essential', price: '40 €', months: [
     ['Botox tercio superior', [['botox-tercio', 'Botox tercio superior']]],
     ['Retoque / revisión', [['retoque-revision', 'Retoque / revisión']]],
     null,
@@ -80,7 +80,7 @@ var PLANS = [
     null,
     ['Higiene facial + Rewards', [['higiene-facial', 'Higiene facial'], ['rewards', 'Rewards']]]
   ]},
-  { id: 'botox-plus', name: 'Botox Plus', price: '60 €', months: [
+  { id: 'botox-plus', name: 'TOX Plus', price: '60 €', months: [
     ['HIFU', [['hifu', 'HIFU']]],
     ['Retoque / revisión + Botox', [['retoque-revision', 'Retoque / revisión'], ['botox', 'Botox']]],
     null,
@@ -124,19 +124,46 @@ var PLANS = [
   ]}
 ];
 
+/* V5.6 · Nomenclatura comercial: la categoría «Bótox» pasa a «TOX» (TOX Essential, TOX Plus) por indicación del cliente.
+   Los nombres de tratamiento del PDF («Botox tercio superior», «Botox») se mantienen. Los ids internos no cambian. */
+
 /* Datos de demostración (no proceden de los documentos) */
 var DEMO = {
   baseToday: [2026, 9, 22],           // 22 oct 2026: «hoy» simulado
   user: { nombre: 'Lucía', apellidos: 'Martín Soler', email: 'lucia.martin@ejemplo.com', telefono: '+34 600 000 000', socia: 'AC-0427' },
   times: ['10:00', '10:30', '11:30', '12:00', '13:00', '16:00', '17:00', '18:30'],
   centro: 'AGE Clinic · dirección por confirmar',
-  profesional: 'Profesional asignado por confirmar'
+  profesional: 'Asignado por la clínica'   // la paciente nunca elige profesional
 };
+
+/* V5.5 · Duración de las citas — PENDIENTE DE CONFIRMAR CON AGE CLINIC.
+   Ningún documento define qué tratamientos o planes admiten 60 minutos: estos valores son de demostración.
+   slot: minutos de cada espacio de agenda. Una cita de 60 min ocupa 2 espacios consecutivos de 30 min.
+   Prioridad de las reglas: byPlan[plan][clave] > byPlan[plan].default > byKey[clave] > default.
+   Cada regla es la lista de duraciones permitidas, en minutos. Si solo hay una, no se pregunta. */
+var DURATIONS = {
+  status: 'demo',
+  slot: 30,
+  'default': [30],
+  byKey: {},
+  byPlan: {
+    'premium':    { 'default': [30, 60], 'valoracion': [30], 'retoque-revision': [30] },
+    'botox-plus': { 'hifu': [30, 60] }
+  }
+};
+
+/* V5.5 · Avisos generales visibles sin iniciar sesión. Ejemplos sin datos personales (DEMO).
+   go: pantalla a la que lleva el aviso (o null si es solo informativo). */
+var GENERAL_NOTIFS = [
+  { i: 'cards', t: 'Conoce AGE Club', x: 'Seis membresías con un recorrido de 12 meses. Puedes explorarlas sin crear una cuenta.', go: 'membresias' },
+  { i: 'spark', t: 'Exclusivo para socios', x: 'Con una membresía activa verás promociones de tratamientos adicionales.', go: null },
+  { i: 'user',  t: 'Tus avisos personales', x: 'Los recordatorios de citas y beneficios aparecen después de iniciar sesión.', go: 'login' }
+];
 
 /* V4 · Categorías de selección (feedback de OUI Creatives). Líneas de apoyo derivadas de la matriz del PDF. */
 var CATEGORIES = [
   { id: 'labios',  name: 'Labios',           line: 'Tratamientos de labios con revisión y regalos', plans: ['labios-essential', 'labios-plus'] },
-  { id: 'botox',   name: 'Bótox',            line: 'Bótox, con revisiones y regalos. En Plus, también HIFU', plans: ['botox-essential', 'botox-plus'] },
+  { id: 'botox',   name: 'TOX',              line: 'Tratamientos con neuromoduladores, revisiones y regalos. En Plus, también HIFU', plans: ['botox-essential', 'botox-plus'] },   // V5.6: antes «Bótox»
   { id: 'glow',    name: 'Skinbooster Glow', line: 'Skinbooster cuatro veces al año, con regalos', plans: ['skinbooster-glow'] },
   { id: 'premium', name: 'Premium',          line: 'Un tratamiento o servicio en cada uno de los 12 meses', plans: ['premium'] }
 ];
@@ -169,7 +196,7 @@ var PHOTOS = {
   activada: ['img/activada.jpg', ''],
   perfil: ['img/perfil.jpg', ''],
   /* [src, alt, encuadre en tarjeta, encuadre en cabecera] */
-  cat: { labios: ['img/ageclub_labios.jpg', 'Detalle de unos labios', '50% 42%', '50% 45%'], botox: ['img/ageclub_botox.jpg', 'Retrato de un hombre de perfil', '50% 30%', '50% 30%'], glow: ['img/ageclub_skinbooster.jpg', 'Rostro de una mujer con la piel luminosa', '50% 22%', '50% 25%'], premium: ['img/ageclub_premium.jpg', 'Detalle de una mirada', '0% 50%', '30% 50%'] },
+  cat: { labios: ['img/ageclub_labios.jpg', 'Detalle de unos labios', '50% 42%', '50% 45%'], botox: ['img/ageclub_botox.jpg', 'Retrato de un hombre de tres cuartos', '50% 30%', '50% 30%'], glow: ['img/ageclub_skinbooster.jpg', 'Rostro de una mujer con la piel luminosa', '50% 22%', '50% 25%'], premium: ['img/ageclub_premium.jpg', 'Detalle de una mirada', '0% 50%', '30% 50%'] },
   tipo: { tratamiento: ['img/trat-tratamiento.jpg', 'Infiltración en el rostro de un paciente'], revision: ['img/trat-revision.jpg', 'Una profesional valora el rostro de una paciente'], regalo: ['img/trat-regalo.jpg', 'Producto de cuidado facial en manos de una profesional'], recompensa: ['img/trat-recompensa.jpg', 'Estanterías con productos en AGE Clinic'] },
   cita: { tratamiento: ['img/cita.jpg', 'Profesional con guantes preparando un vial y una jeringa'], revision: ['img/revision.jpg', 'Una doctora revisa el rostro de una paciente'] }
 };
