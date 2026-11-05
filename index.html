@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#ffffff">
-<title>AGE Club — Prototipo · V5.7</title>
+<title>AGE Club — Prototipo · V5.8</title>
 <link rel="icon" href="icons/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
@@ -63,6 +63,7 @@ body{background:var(--pg-bg);color:var(--pg-fg);font-family:var(--pp);font-size:
 .prow select{flex:1;font:500 13px var(--pp);padding:9px 10px;border-radius:12px;border:1px solid var(--pg-line);background:var(--pg-panel);color:var(--pg-fg)}
 .dim{opacity:.5}
 #pstate{font:400 12px var(--pp);color:var(--pg-mute)}
+.pnote{font-size:12px!important;margin:0 0 8px!important}
 #inv details{border-top:1px solid var(--pg-line);padding:8px 0}
 #inv summary{cursor:pointer;font-weight:500;padding:4px 0;list-style-position:inside}
 #inv summary span{font:400 11px var(--pp);color:var(--pg-mute);margin-left:4px}
@@ -94,8 +95,76 @@ body.present .page{grid-template-columns:1fr}
  .panel,body.present .panel{display:none;position:fixed;top:0;left:0;right:0;bottom:auto;height:100vh;height:100dvh;box-sizing:border-box;align-self:auto;z-index:100;border:0;border-radius:0;max-height:none;overflow:auto;padding-top:max(20px,env(safe-area-inset-top,0px));padding-bottom:max(20px,env(safe-area-inset-bottom,0px))}
  body.panel-open .panel{display:flex}
  .pclose{display:inline-flex}
- .fab{display:inline-flex;position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 96px);right:max(12px,env(safe-area-inset-right,0px));z-index:90;font:600 10.5px var(--pp);letter-spacing:.12em;padding:9px 12px;border-radius:999px;border:0;background:rgba(58,58,58,.82);color:#fff;cursor:pointer}
+ .fab{display:inline-flex;position:fixed;top:calc(env(safe-area-inset-top,0px) + 12px);left:50%;transform:translateX(-50%);z-index:90;font:600 10.5px var(--pp);letter-spacing:.12em;padding:9px 12px;border-radius:999px;border:0;background:rgba(58,58,58,.82);color:#fff;cursor:pointer}
 }
+/* ===== V5.8 · decisiones de la sesión del 4/11/2026 ===== */
+/* 8 · Botón flotante «Reservar»: por encima de la barra de pestañas, alineado a su borde derecho; el contenido le reserva espacio */
+.rfab{position:absolute;right:20px;bottom:100px;z-index:7;display:inline-flex;align-items:center;gap:8px;height:52px;padding:0 22px 0 18px;border:0;border-radius:26px;background:var(--brown);color:#fff;font:500 15px var(--pp);letter-spacing:.01em;box-shadow:0 10px 26px rgba(67,30,12,.32),0 2px 6px rgba(67,30,12,.2);cursor:pointer}
+.rfab .ic{width:20px;height:20px;stroke-width:2}
+.rfab:hover{background:#5a2a12}
+.rfab:focus-visible{outline:3px solid var(--beige);outline-offset:3px}
+.scr.has-fab{padding-bottom:180px}
+.device.cap .rfab{bottom:100px}
+.mem+.mem{margin-top:0;box-shadow:var(--sh)}   /* segunda membresía: debajo de la primera, sin solaparse */
+/* 3 · selector de membresía antes de Mi recorrido */
+.mchoice{display:flex;flex-direction:column;gap:12px;width:100%;padding:22px;border:0;border-radius:28px;background:#fff;box-shadow:var(--sh);text-align:left;cursor:pointer;color:var(--ink)}
+.mchoice-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.mchoice-h>span:first-child{display:flex;flex-direction:column;gap:6px}
+.mchoice-n{font:400 30px/1.05 var(--ev);letter-spacing:-.02em;color:var(--brown)}
+.mchoice-s{font-size:14px;color:var(--ink-2);line-height:1.45}
+.mchoice .ring{width:76px;height:76px;flex:none}
+.mchoice .ring svg{width:100%;height:100%}
+.mchoice-h>span:first-child{min-width:0}
+.rec-lk{display:inline-flex;gap:16px;flex-wrap:wrap;justify-content:flex-end}
+/* 4 · dos servicios en una cita */
+.svcs{display:flex;flex-direction:column;gap:10px}
+.svc{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border:0;border-radius:22px;background:#fff;box-shadow:var(--sh);text-align:left;cursor:pointer;color:var(--ink);min-height:64px}
+.svc.on{box-shadow:inset 0 0 0 2px var(--brown),var(--sh);background:var(--beige-soft)}
+.svc:disabled{cursor:not-allowed;opacity:.55;box-shadow:inset 0 0 0 1px var(--grey)}
+.svc-box{width:24px;height:24px;border-radius:8px;flex:none;box-shadow:inset 0 0 0 1.75px var(--brown);display:grid;place-items:center;color:#fff}
+.svc.on .svc-box{background:var(--brown)}
+.svc-box .ic{width:16px;height:16px;stroke-width:2.6}
+.svc-why{display:block;font-size:12.5px;color:var(--ink-2);margin-top:2px;font-style:italic}
+.svc-sum{margin:0;text-align:center;font-size:14px;color:var(--ink)}
+.svc-tot{display:flex;justify-content:space-between;align-items:baseline;padding:12px 4px 4px;margin-top:4px;border-top:1px solid var(--line);font-size:14px}
+.svc-tot b{font:400 22px var(--ev);color:var(--brown)}
+.svc-l{margin:0;padding:0 0 0 18px;display:flex;flex-direction:column;gap:8px}
+.svc-l li span{display:block;font-size:13px;color:var(--ink-2);font-weight:400}
+.ic.sm{width:16px;height:16px;vertical-align:-3px}
+/* 1 y 6 · acceso con código y móvil obligatorio */
+.req{font:500 11.5px var(--pp);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin-left:6px}
+input.otp{font:400 30px var(--ev);letter-spacing:.42em;text-align:center;padding-left:.42em}
+/* 5 · canje en la clínica */
+.redeem{display:flex;gap:12px;align-items:flex-start;border-radius:20px;padding:16px;font-size:14.5px;line-height:1.55;background:var(--beige-soft)}
+.redeem.st-disponible{background:var(--beige)}
+.redeem .ic{flex:none;width:22px;height:22px;color:var(--brown);margin-top:1px}
+/* 9 · precio individual y precio de socio */
+.ptrio{display:grid;grid-template-columns:auto auto 1fr;align-items:end;gap:4px 16px;margin-top:6px}
+.ptrio .pt-l{display:block;font:600 11.5px var(--pp);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);margin-bottom:2px}
+.ptrio s{font-size:15px;color:var(--ink-2);text-decoration-thickness:1.5px}
+.ptrio b{font:400 22px/1 var(--ev);color:var(--brown)}
+.pt-save{justify-self:end;align-self:center;font:600 12px var(--pp);color:var(--brown);background:var(--beige);border-radius:999px;padding:6px 10px;white-space:nowrap}
+.ptrio.big{gap:6px 22px}
+.ptrio.big b{font-size:40px;letter-spacing:-.02em}
+.ptrio.big s{font-size:20px}
+.ptrio.big .pt-save{grid-column:1/-1;justify-self:start;font-size:13.5px;padding:8px 14px;margin-top:6px}
+.pbox{display:flex;flex-direction:column;gap:12px;background:#fff;border-radius:26px;box-shadow:var(--sh);padding:20px}
+.pbox .sec-h{margin:0}
+.slist{display:flex;flex-direction:column;gap:10px}
+.srow{display:flex;align-items:center;gap:10px;width:100%;padding:16px 16px 16px 20px;border:0;border-radius:22px;background:#fff;box-shadow:var(--sh);text-align:left;cursor:pointer;color:var(--ink)}
+.srow-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.srow-n{font:400 19px/1.15 var(--ev);color:var(--brown)}
+.srow .ptrio{grid-template-columns:auto auto 1fr}
+.srow .chev{flex:none;color:var(--brown)}
+.ptrio b,.ptrio s,.h-sec .demo-tag{white-space:nowrap}
+.h-sec .demo-tag{flex:none}
+.pcard{position:relative}
+.pcard-badge{position:absolute;top:14px;left:14px;font:600 13px var(--pp);color:var(--brown);background:var(--beige);border-radius:999px;padding:7px 12px}
+.pcard .ptrio{margin:4px 0 2px}
+.lprice{font-size:13px;color:var(--ink-2)}
+.lprice b{color:var(--brown);font-weight:600}
+@media (max-width:360px){.ptrio{grid-template-columns:auto auto}.pt-save{grid-column:1/-1;justify-self:start}}
+
 /* modo captura: altura de contenido completa */
 .device.cap{padding:0;border-radius:0;background:transparent}
 .device.cap .screen{height:auto;min-height:844px;border-radius:0}
@@ -658,7 +727,7 @@ li.later{list-style:none;margin-top:30px;padding-bottom:4px}
     <div class="ptop">
       <div>
         <h1>AGE Club</h1>
-        <p>Prototipo · V5 · diseño visual definitivo · fase 01</p>
+        <p>Prototipo · V5.8 · decisiones del 4/11/2026</p>
       </div>
       <button class="tbtn pclose" id="close-panel" type="button" aria-label="Cerrar panel de demostración">Cerrar</button>
     </div>
@@ -667,10 +736,15 @@ li.later{list-style:none;margin-top:30px;padding-bottom:4px}
       <div class="pbtns" id="scn"></div>
     </div>
     <div id="cyc-wrap">
-      <div class="plabel"><label for="cyc">Simular mes del ciclo</label></div>
+      <div class="plabel"><label for="cyc" id="cyc-l">Simular mes del ciclo</label></div>
       <div class="prow"><select id="cyc"></select><button class="pbtn" id="reset" type="button">Reiniciar</button></div>
     </div>
     <p id="pstate"></p>
+    <div>
+      <div class="plabel">Backoffice de la clínica · simulación</div>
+      <p class="pnote">Los regalos y Rewards se recogen en AGE Clinic. Solo el equipo los marca como canjeados.</p>
+      <div class="pbtns" id="staff"></div>
+    </div>
     <div>
       <div class="plabel">Inventario de pantallas</div>
       <div id="inv"></div>
@@ -678,13 +752,14 @@ li.later{list-style:none;margin-top:30px;padding-bottom:4px}
     <div>
       <div class="plabel">Hipótesis pendientes de aprobación</div>
       <ol class="hyp">
-        <li>Tratamientos y beneficios se desbloquean al empezar su mes del ciclo (sin reservas ni canjes anticipados).</li>
-        <li>Cambiar de plan reinicia el ciclo en el Mes 1 y anula las citas reservadas.</li>
-        <li>Un cambio de fecha queda «solicitado» hasta que la clínica lo confirma.</li>
-        <li>«Valoración» se trata como revisión; «Matcha/coffee + croissant» como regalo.</li>
-        <li>Progreso = actos clínicos; regalos y Rewards se cuentan aparte.</li>
+        <li>Hasta dos membresías a la vez; no se puede tener dos veces el mismo plan.</li>
+        <li>Cancelar una membresía conserva lo realizado y anula sus citas reservadas. Permanencia y plazos por confirmar.</li>
+        <li>Dos servicios por cita, seguidos; solo se combinan si comparten mes de reserva. Duraciones DEMO.</li>
+        <li>Código de acceso de 6 dígitos (prueba: 123456). Validez e intentos por confirmar.</li>
+        <li>Móvil: validación básica (España o formato internacional). Formato definitivo por confirmar.</li>
+        <li>Regalos y Rewards: se recogen en la clínica y los canjea el equipo desde el backoffice.</li>
+        <li>Tratamientos individuales: precios habitual y de socio DEMO.</li>
         <li>Código de descuento: solo se valida el formato; no cambia el importe.</li>
-        <li>Exclusivo para socios: promociones de ejemplo, sin precios ni condiciones; la solicitud de cita es simulada.</li>
       </ol>
     </div>
     <p class="fine-p">Planes, importes y meses según «El recorrido del cliente». Fechas, citas, disponibilidad, estados y promociones son simulados (DEMO). Fotografías reales de AGE Clinic.</p>

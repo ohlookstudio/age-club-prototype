@@ -24,9 +24,9 @@ var CATALOG = {
   'mantenimiento':    { name: 'Mantenimiento', type: 'tratamiento', note: 'El PDF no indica qué incluye el mantenimiento.' },
   'retoque-revision': { name: 'Retoque / revisión', type: 'revision', note: 'Confirmar si se reserva como cita independiente.' },
   'valoracion':       { name: 'Valoración', type: 'revision', note: 'Aparece junto a Radiesse en el Mes 1 de Premium.' },
-  'age-gift':         { name: 'AGE Gift', type: 'regalo', note: 'Goodie bag en tienda. Forma de recogida por confirmar.' },
-  'matcha':           { name: 'Matcha/coffee + croissant', type: 'regalo', note: 'Consumición incluida. Dónde y cómo se canjea, por confirmar.' },
-  'rewards':          { name: 'Rewards', type: 'recompensa', note: 'Qué incluyen y cómo se canjean, por confirmar.' }
+  'age-gift':         { name: 'AGE Gift', type: 'regalo', note: 'Goodie bag en tienda. Se recoge en AGE Clinic.' },
+  'matcha':           { name: 'Matcha/coffee + croissant', type: 'regalo', note: 'Consumición incluida. Se canjea en AGE Clinic; el detalle está por confirmar.' },
+  'rewards':          { name: 'Rewards', type: 'recompensa', note: 'Se canjean en AGE Clinic. Qué incluyen, por confirmar.' }
 };
 
 var TYPES = {
@@ -131,9 +131,11 @@ var PLANS = [
 var DEMO = {
   baseToday: [2026, 9, 22],           // 22 oct 2026: «hoy» simulado
   user: { nombre: 'Lucía', apellidos: 'Martín Soler', email: 'lucia.martin@ejemplo.com', telefono: '+34 600 000 000', socia: 'AC-0427' },
-  times: ['10:00', '10:30', '11:30', '12:00', '13:00', '16:00', '17:00', '18:30'],
+  /* V5.8 · agenda DEMO con huecos de 30 min (10:00–14:00 y 16:00–19:30) para poder encadenar dos servicios (hasta 120 min) */
+  times: ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00'],
   centro: 'AGE Clinic · dirección por confirmar',
-  profesional: 'Asignado por la clínica'   // la paciente nunca elige profesional
+  /* V5.8 · decisión 4/11/2026: la app no muestra ninguna referencia al profesional (se retira DEMO.profesional). */
+  otp: '123456'   // código de verificación de prueba (envío y validación simulados)
 };
 
 /* V5.5 · Duración de las citas — PENDIENTE DE CONFIRMAR CON AGE CLINIC.
@@ -160,6 +162,25 @@ var GENERAL_NOTIFS = [
   { i: 'user',  t: 'Tus avisos personales', x: 'Los recordatorios de citas y beneficios aparecen después de iniciar sesión.', go: 'login' }
 ];
 
+/* V5.8 · Tratamientos individuales con precio de socio (decisión 4/11/2026).
+   PRECIOS DE DEMOSTRACIÓN: ningún documento de AGE Clinic los define. Se muestran siempre con la etiqueta «Precios DEMO».
+   regular: precio habitual · member: precio con cualquier membresía activa. El ahorro se calcula en la app.
+   Para cambiar un precio, edítalo aquí; para retirar un tratamiento de la lista, bórralo. */
+var SINGLES = {
+  status: 'demo',
+  items: [
+    { key: 'acido-labio',      regular: 280, member: 238 },
+    { key: 'labios-contorno',  regular: 390, member: 330 },
+    { key: 'botox-tercio',     regular: 300, member: 255 },
+    { key: 'hifu',             regular: 450, member: 380 },
+    { key: 'skinbooster',      regular: 250, member: 210 },
+    { key: 'radiesse',         regular: 520, member: 440 },
+    { key: 'polinucleotidos',  regular: 290, member: 245 },
+    { key: 'peeling-higiene',  regular: 95,  member: 80 },
+    { key: 'higiene-facial',   regular: 75,  member: 64 }
+  ]
+};
+
 /* V4 · Categorías de selección (feedback de OUI Creatives). Líneas de apoyo derivadas de la matriz del PDF. */
 var CATEGORIES = [
   { id: 'labios',  name: 'Labios',           line: 'Tratamientos de labios con revisión y regalos', plans: ['labios-essential', 'labios-plus'] },
@@ -172,7 +193,7 @@ var CATEGORIES = [
    Para añadir una promoción, añade un objeto; para retirarla, cambia status a 'retirada' o bórrala.
    status: 'ejemplo' (se muestra marcada como ejemplo) | 'aprobada' | 'retirada' (no se muestra).
    key: clave del catálogo; la app la cruza con el plan activo para indicar si el tratamiento ya está incluido.
-   price.regular / price.member: importe en euros o null (sin confirmar). El descuento solo se muestra si ambos existen.
+   price.regular / price.member: importe en euros o null (sin confirmar). V5.8: si son null, la app muestra el precio DEMO del tratamiento en SINGLES.
    plans: 'all' o lista de ids de plan a los que se ofrece. validFrom / validTo: 'AAAA-MM-DD' o null. */
 var PROMOS = [
   { id: 'hifu', status: 'ejemplo', key: 'hifu', name: 'HIFU', summary: null,
