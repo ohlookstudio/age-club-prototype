@@ -1,13 +1,13 @@
-# AGE Club — Prototipo · V5.8
+# AGE Club — Prototipo · V5.9
 
-Material confidencial sujeto a NDA. Fase 01. Diseño visual aprobado (V5.4), ajustes funcionales del cliente (V5.5), ajustes visuales y de nomenclatura (V5.6), botones sobre fotografía sin círculo ni flecha (V5.7) y decisiones de la sesión del 4/11/2026 (V5.8, 5 nov 2026).
+Material confidencial sujeto a NDA. Fase 01. Diseño visual aprobado (V5.4), ajustes funcionales del cliente (V5.5), ajustes visuales y de nomenclatura (V5.6), botones sobre fotografía sin círculo ni flecha (V5.7) decisiones de la sesión del 4/11/2026 (V5.8) y datos oficiales de membresías y tratamientos individuales de AGE Clinic (V5.9, 6 nov 2026).
 
 ## Contenido
 
 | Archivo | Para qué sirve |
 | --- | --- |
 | `index.html` | El prototipo: interfaz, sistema visual V5 y panel de demostración |
-| `data.js` | Datos: 6 planes × 12 meses según «El recorrido del cliente», las 4 categorías, las promociones de «Exclusivo para socios» (`PROMOS`), las fotografías (`PHOTOS`), la duración de las citas (`DURATIONS`), los avisos generales sin sesión (`GENERAL_NOTIFS`) y los precios DEMO de los tratamientos individuales (`SINGLES`) |
+| `data.js` | Datos: 6 planes × 12 meses según «El recorrido del cliente», las 4 categorías, las promociones de «Exclusivo para socios» (`PROMOS`), las fotografías (`PHOTOS`), la duración de las citas (`DURATIONS`), los avisos generales sin sesión (`GENERAL_NOTIFS`) y el catálogo de tratamientos individuales con tarifa de socio de AGE Clinic (`SINGLES`) |
 | `app.js` | Lógica: navegación, estados, acceso con correo y código simulado, una o dos membresías, reservas de uno o dos servicios, reserva anticipada, modificación directa de citas, cancelaciones, canje por la clínica (simulado), código de descuento y solicitudes de cita simuladas |
 | `img/` | Fotografías optimizadas para web: las 5 tratadas de la carpeta AGE_CLUB_FOTOS (bienvenida y membresías, con su nombre original), 15 de AGE Clinic con el acabado V5.6 y la foto de perfil de Lucía |
 | `brand/` | Logotipo completo de AGE Club en negro y en blanco, y brandmark de AGE Club: PNG originales sin modificar |
@@ -23,13 +23,59 @@ Todas las rutas son relativas: funciona en la raíz de un dominio o en una subca
 Descomprime la carpeta y abre `index.html` con Chrome, Safari, Firefox o Edge. Funciona sin conexión.
 
 - **Entrada:** empieza en la Bienvenida. «Explorar membresías» lleva a las 4 categorías sin cuenta. La campana abre los avisos generales sin iniciar sesión. Para entrar como socia: «Iniciar sesión» con `lucia.martin@ejemplo.com` → «Enviar código» → código de prueba `123456`. No hay contraseñas.
-- **Exclusivo para socios:** con sesión y membresía, desde la tarjeta fotográfica de Inicio. Cada promoción muestra precio habitual, precio de socio y ahorro (DEMO). La etiqueta depende de los planes activos: con TOX Essential, HIFU es «Adicional a tu plan»; con Premium, «Incluido en tu plan · Meses 2 y 4». La solicitud de cita es una simulación.
+- **Exclusivo para socios:** con sesión y membresía, desde la tarjeta fotográfica de Inicio. Cada promoción muestra precio habitual, precio de socio y ahorro (tarifas de AGE Clinic; las promociones siguen siendo ejemplos). La etiqueta depende de los planes activos: con TOX Essential, HIFU es «Adicional a tu plan»; con Premium, «Incluido en tu plan · Meses 2 y 4». La solicitud de cita es una simulación.
 - **Dos membresías:** escenario «Socia · dos membresías» del panel (TOX Essential en el Mes 6 y Skinbooster Glow en el Mes 4).
 - **Canje de regalos:** en el panel, «Backoffice de la clínica · simulación» lista los regalos disponibles; al pulsar «Entregar…» quedan canjeados. La app de la paciente no tiene ese botón.
 - **Código de descuento:** en Activación. Solo se valida el formato (4–20 letras o números); `PRUEBA1` se registra y `AB-1` da error. No cambia el importe.
 - **Escritorio:** el panel lateral permite elegir entre 6 escenarios, simular el mes del ciclo, simular el canje en la clínica y saltar a cualquiera de las 84 pantallas. «Modo paciente» oculta el panel.
 - **Móvil:** el prototipo ocupa toda la pantalla. El botón DEMO, arriba en el centro, abre el panel (en V5.8 deja libre la esquina inferior derecha para el botón «Reservar»).
 - **Enlace directo a una pantalla:** añade su código al final de la URL, por ejemplo `index.html#E1` o `index.html#G2`.
+
+## Cambios de la V5.9 · datos oficiales de AGE Clinic (6 nov 2026)
+
+Fuentes: `AGECLINIC_Membresias_App.xlsx` (hojas Precios, Textos_app y Calendario), `AGECLINIC_Tratamientos_Individuales_Club.xlsx` y los folletos comerciales. Actualización de contenido y datos: no cambian la composición, las fotografías, los botones ni la navegación. **Los recorridos de 12 meses no se han modificado** (ver «Diferencias encontradas»).
+
+1. **Fichas de las 6 membresías.** Descripción breve adaptada de los textos de AGE Clinic (una frase, sin texto publicitario) y bloque «Tu año en el club»: tarifa fuera del club del mismo conjunto de servicios, total de 12 cuotas y ahorro con el porcentaje (un decimal, como en la documentación). En Condiciones: «Membresía anual, en 12 cuotas mensuales», importe anual y «Tratamientos sujetos a valoración médica»; permanencia y renovación siguen por confirmar.
+2. **Comparación Essential / Plus.** Cada modalidad muestra «Ahorras N € al año · −X %».
+3. **Activación.** Bajo la cuota: «12 cuotas · N € al año».
+4. **Tratamientos individuales.** Los 8 tratamientos y tarifas del catálogo de AGE Clinic sustituyen a los 9 de ejemplo: HIFU Ultraformer por zona 199/160 €, TOX tercio superior 380/300 €, Labios con ácido hialurónico 250/190 €, Labios + contorno 290/240 €, Radiesse 1,5 ml 450/380 €, Higiene facial profesional 130/100 €, Skinbooster · mesoterapia NCTF 200/170 € y Polinucleótidos 250/190 €. Se retira «Peeling / higiene» (no está en el catálogo). Ya no se marcan como DEMO. Las fichas de HIFU y Polinucleótidos usan la descripción del documento; HIFU indica sus zonas (rostro, papada o cuello, por zona y sesión).
+5. **Exclusivo para socios.** La promoción de ejemplo «Peeling / higiene» pasa a «Higiene facial profesional», que sí está en el catálogo. Las tarjetas y fichas usan las tarifas oficiales. Las promociones siguen marcadas como «Ejemplo».
+6. **Importes** con separador de miles (3.209 €).
+
+Pantallas afectadas: A2, A3 (modalidades), A4, A4b, A5, A10 (fichas), A6–A6c, A11 (activación), A1 y B1 (texto de condiciones), B1 (tratamientos individuales), C2, C3, C5 (catálogo y fichas), G1–G5 (Exclusivo para socios).
+
+### Ya correcto (sin cambios)
+
+Nombres de las 6 membresías y cuotas mensuales (25, 45, 40, 60, 40 y 200 €/mes); denominación TOX; el recorrido de TOX Essential y de TOX Plus coincide mes a mes con el calendario del Excel (salvo nombres: ver abajo).
+
+### Diferencias encontradas · pendientes de decisión (no aplicadas)
+
+| Membresía | Recorrido aprobado (app) | Calendario del Excel / folleto |
+| --- | --- | --- |
+| Labios Essential | Mes 3 sin actividad | Mes 3: Higiene facial (130 €). El folleto la incluye |
+| Labios Essential | Mes 10: «Tratamiento y seguimiento» | Mes 10: «Seguimiento médico» (50 €) |
+| Labios Essential y Plus | Mes 6: «Peeling / scrub» | Mes 6: «Scrub labial» (50 €) |
+| Labios Plus | Mes 3 sin actividad | Mes 3: Higiene facial (130 €). El folleto la incluye |
+| Skinbooster Glow | Mes 6: Matcha/coffee + croissant | Mes 6: Higiene facial (130 €). El folleto incluye higiene facial y no la consumición |
+| TOX Plus | Mes 6: «Peeling / higiene» | Mes 6: «Higiene facial» («Dos higienes faciales» en el folleto) |
+| Premium | Mes 1: Radiesse + valoración | Mes 1: Radiesse 1,5 ml (sin valoración) |
+| Premium | Mes 3: Botox · Mes 9: Botox · Mes 10: Retoque + AGE Gift | Mes 3: neuromoduladores · Mes 9: Higiene facial · Mes 10: neuromoduladores |
+| Premium | Mes 4: Retoque + HIFU (segunda sesión de HIFU) | Mes 4: retoque de neuromoduladores + retoque de HIFU (0 €) |
+| Premium | Mes 5 y Mes 8: Peeling / higiene | Mes 5: Higiene facial · Mes 8: Armonización facial (1.050 €) |
+| Premium | Mes 6: Polinucleótidos + AGE Gift | Mes 6: sin tratamiento programado |
+| Premium | Mes 11: Skinbooster · Mes 12: AGE Gift + Rewards | Mes 11: Skinbooster NCTF + retoque + regalo · Mes 12: Revisión del plan + Rewards |
+| Premium | Categoría: «Un tratamiento o servicio en cada uno de los 12 meses» | Con el calendario del Excel, el Mes 6 queda vacío |
+
+Consecuencia: el ahorro anual de las fichas es el que da AGE Clinic y se calcula sobre su calendario. En Labios Essential, Labios Plus, Skinbooster Glow y Premium ese conjunto de servicios no coincide todavía con el recorrido que muestra la app.
+
+Otras dudas de datos:
+- **Labios + contorno:** 250 € en el calendario de membresías y 290 € como tratamiento individual.
+- **Nombres:** el recorrido usa los del documento original («Ácido en labio», «Botox tercio superior», «Botox», «Skinbooster», «Radiesse», «HIFU»); el Excel usa «Labios con ácido hialurónico», «neuromoduladores del tercio superior», «Skinbooster NCTF», «Radiesse 1,5 ml» y «HIFU (zona)». El catálogo individual dice «B(TOX) · Tercio superior»; en la app se muestra «TOX · tercio superior» por la denominación acordada.
+- **Skinbooster Glow:** el Excel la llama «Skinbooster Glow · NCTF»; la app mantiene «Skinbooster Glow».
+- **Premium:** el folleto y el Excel tienen titulares distintos («Todo un año para ponerte en primer lugar» / «Tu mejor versión merece un plan a su altura»), y el folleto dice «bótox».
+- **Polinucleótidos:** está en el catálogo individual y en el recorrido actual de Premium (Mes 6), pero no en la lista «incluye» de Premium del Excel.
+- **Folletos:** se han recibido 6 (uno por membresía).
+- **Hoja «Comparativa» del Excel de tratamientos:** marca como «pendiente de confirmar» la ventaja de Labios Essential y Premium frente a la compra a tarifa socio. No se usa en la app.
 
 ## Cambios de la V5.8 · decisiones de la sesión del 4/11/2026
 
@@ -81,7 +127,11 @@ En `data.js`, la lista `PROMOS`. Cada promoción tiene `status` (`ejemplo`, `apr
 
 ## Cambiar los precios de los tratamientos individuales
 
-En `data.js`, la lista `SINGLES.items`: `key` (clave del catálogo), `regular` (precio habitual) y `member` (precio de socio). El ahorro y el porcentaje se calculan solos. Todos los valores actuales son de demostración.
+En `data.js`, la lista `SINGLES.items`: `key` (clave del catálogo), `name` (nombre comercial), `regular` (tarifa fuera del club), `member` (tarifa de socio) y, opcionales, `desc` y `cond`. El ahorro y el porcentaje se calculan solos. Fuente: `AGECLINIC_Tratamientos_Individuales_Club.xlsx` (05/11/2026).
+
+## Cambiar la comparativa anual de una membresía
+
+En `data.js`, en cada plan de `PLANS`: `annual` (`club`, `outside`, `saving`, `pct`) y `desc`. Fuente: hoja Precios de `AGECLINIC_Membresias_App.xlsx`. Los meses (`months`) son el recorrido aprobado y no dependen de estos valores.
 
 ## Publicarlo en GitHub Pages
 
@@ -99,13 +149,13 @@ En `data.js`, la lista `SINGLES.items`: `key` (clave del catálogo), `regular` (
 4. **Cancelar una membresía:** permanencia, preaviso, cuotas pendientes y qué pasa con las citas reservadas y los regalos no recogidos (en el prototipo, las citas se anulan y lo realizado se conserva).
 5. **Dos servicios por cita:** qué servicios se pueden combinar, si pueden ser de membresías distintas o de meses distintos, orden y tiempo entre ellos, y si se puede quitar uno de una cita ya reservada.
 6. **Duraciones** (`DURATIONS`) y agenda: valores DEMO; la disponibilidad real depende del sistema de la clínica.
-7. **Precios de los tratamientos individuales** (`SINGLES`): todos DEMO, igual que el descuento de socio. Condiciones, y compatibilidad con promociones y códigos.
+7. **Recorridos de 12 meses frente al calendario del Excel:** qué versión vale en Labios Essential, Labios Plus, Skinbooster Glow y Premium, y los nombres de los servicios (tabla «Diferencias encontradas»). Labios + contorno: 250 € o 290 €. Compatibilidad de la tarifa de socio con promociones y códigos.
 8. **Canje en la clínica:** qué herramienta usa el equipo (backoffice) y si la paciente recibe un aviso al canjear.
 9. **Códigos de descuento (decisión 10):** se mantiene la simulación; solo se valida el formato y el importe no cambia.
 10. Reserva anticipada: cuánta antelación se permite y si un tratamiento puede realizarse antes de su mes.
 11. Modificación de citas: plazo mínimo y número de cambios.
 12. «Valoración» se trata como revisión; «Matcha/coffee + croissant», como regalo. El progreso cuenta actos clínicos.
 13. Avisos sin sesión: contenido y frecuencia (los actuales son ejemplos).
-14. Nombres de tratamiento «Botox tercio superior» y «Botox» (del documento de AGE Clinic): se mantienen; confirmar si también deben cambiar.
+14. Nombres de tratamiento en el recorrido («Botox tercio superior», «Botox», «Ácido en labio»…): se mantienen hasta decidir si se adoptan los del Excel.
 
-Importes mensuales, planes y meses proceden del documento de AGE Clinic. Fechas, citas, disponibilidad, estados, promociones, precios de tratamientos individuales, códigos de acceso y datos personales son simulados (DEMO). Duración, permanencia y renovación siguen por confirmar.
+Importes mensuales y anuales, ahorros, tarifas de los tratamientos individuales, planes y meses proceden de la documentación de AGE Clinic. Fechas, citas, disponibilidad, estados, promociones, códigos de acceso y datos personales son simulados (DEMO). Duración, permanencia y renovación siguen por confirmar.

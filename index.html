@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#ffffff">
-<title>AGE Club — Prototipo · V5.8</title>
+<title>AGE Club — Prototipo · V5.9</title>
 <link rel="icon" href="icons/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
@@ -139,22 +139,23 @@ input.otp{font:400 30px var(--ev);letter-spacing:.42em;text-align:center;padding
 .redeem.st-disponible{background:var(--beige)}
 .redeem .ic{flex:none;width:22px;height:22px;color:var(--brown);margin-top:1px}
 /* 9 · precio individual y precio de socio */
-.ptrio{display:grid;grid-template-columns:auto auto 1fr;align-items:end;gap:4px 16px;margin-top:6px}
+.ptrio{display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px 16px;margin-top:6px}   /* V5.9: flex con salto de línea; nunca se sale de la tarjeta */
 .ptrio .pt-l{display:block;font:600 11.5px var(--pp);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);margin-bottom:2px}
 .ptrio s{font-size:15px;color:var(--ink-2);text-decoration-thickness:1.5px}
 .ptrio b{font:400 22px/1 var(--ev);color:var(--brown)}
-.pt-save{justify-self:end;align-self:center;font:600 12px var(--pp);color:var(--brown);background:var(--beige);border-radius:999px;padding:6px 10px;white-space:nowrap}
+.pt-save{margin-left:auto;align-self:center;font:600 12px var(--pp);color:var(--brown);background:var(--beige);border-radius:999px;padding:6px 10px;white-space:nowrap}
 .ptrio.big{gap:6px 22px}
 .ptrio.big b{font-size:40px;letter-spacing:-.02em}
 .ptrio.big s{font-size:20px}
-.ptrio.big .pt-save{grid-column:1/-1;justify-self:start;font-size:13.5px;padding:8px 14px;margin-top:6px}
+.ptrio.big::after,.pbox .ptrio::after{content:'';flex-basis:100%;height:0;order:2}
+.ptrio.big .pt-save,.pbox .pt-save{order:3;margin-left:0;margin-top:6px}
+.ptrio.big .pt-save{font-size:13.5px;padding:8px 14px}
 .pbox{display:flex;flex-direction:column;gap:12px;background:#fff;border-radius:26px;box-shadow:var(--sh);padding:20px}
 .pbox .sec-h{margin:0}
 .slist{display:flex;flex-direction:column;gap:10px}
 .srow{display:flex;align-items:center;gap:10px;width:100%;padding:16px 16px 16px 20px;border:0;border-radius:22px;background:#fff;box-shadow:var(--sh);text-align:left;cursor:pointer;color:var(--ink)}
 .srow-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .srow-n{font:400 19px/1.15 var(--ev);color:var(--brown)}
-.srow .ptrio{grid-template-columns:auto auto 1fr}
 .srow .chev{flex:none;color:var(--brown)}
 .ptrio b,.ptrio s,.h-sec .demo-tag{white-space:nowrap}
 .h-sec .demo-tag{flex:none}
@@ -162,8 +163,9 @@ input.otp{font:400 30px var(--ev);letter-spacing:.42em;text-align:center;padding
 .pcard-badge{position:absolute;top:14px;left:14px;font:600 13px var(--pp);color:var(--brown);background:var(--beige);border-radius:999px;padding:7px 12px}
 .pcard .ptrio{margin:4px 0 2px}
 .lprice{font-size:13px;color:var(--ink-2)}
+/* V5.9 · ahorro anual de cada modalidad (comparación Essential / Plus) */
+.mod-save{align-self:flex-start;font:600 13px var(--pp);color:var(--brown);background:var(--beige);border-radius:999px;padding:6px 12px}
 .lprice b{color:var(--brown);font-weight:600}
-@media (max-width:360px){.ptrio{grid-template-columns:auto auto}.pt-save{grid-column:1/-1;justify-self:start}}
 
 /* modo captura: altura de contenido completa */
 .device.cap{padding:0;border-radius:0;background:transparent}
@@ -727,7 +729,7 @@ li.later{list-style:none;margin-top:30px;padding-bottom:4px}
     <div class="ptop">
       <div>
         <h1>AGE Club</h1>
-        <p>Prototipo · V5.8 · decisiones del 4/11/2026</p>
+        <p>Prototipo · V5.9 · datos de AGE Clinic</p>
       </div>
       <button class="tbtn pclose" id="close-panel" type="button" aria-label="Cerrar panel de demostración">Cerrar</button>
     </div>
@@ -758,11 +760,11 @@ li.later{list-style:none;margin-top:30px;padding-bottom:4px}
         <li>Código de acceso de 6 dígitos (prueba: 123456). Validez e intentos por confirmar.</li>
         <li>Móvil: validación básica (España o formato internacional). Formato definitivo por confirmar.</li>
         <li>Regalos y Rewards: se recogen en la clínica y los canjea el equipo desde el backoffice.</li>
-        <li>Tratamientos individuales: precios habitual y de socio DEMO.</li>
+        <li>Recorridos de 12 meses: se mantienen los aprobados; las diferencias con el calendario de AGE Clinic (Labios, Skinbooster Glow, Premium) están pendientes.</li>
         <li>Código de descuento: solo se valida el formato; no cambia el importe.</li>
       </ol>
     </div>
-    <p class="fine-p">Planes, importes y meses según «El recorrido del cliente». Fechas, citas, disponibilidad, estados y promociones son simulados (DEMO). Fotografías reales de AGE Clinic.</p>
+    <p class="fine-p">Planes, importes y meses según «El recorrido del cliente». Tarifas de socio y comparativas anuales de AGE Clinic. Fechas, citas, disponibilidad, estados y promociones son simulados (DEMO). Fotografías reales de AGE Clinic.</p>
   </aside>
   <main class="stage">
     <div class="device" id="device"><div class="screen" id="screen" aria-label="Pantalla del prototipo"></div></div>

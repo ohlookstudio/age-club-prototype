@@ -15,7 +15,7 @@ var CATALOG = {
   'peeling-higiene':  { name: 'Peeling / higiene', type: 'tratamiento' },
   'higiene-facial':   { name: 'Higiene facial', type: 'tratamiento' },
   'botox-tercio':     { name: 'Botox tercio superior', type: 'tratamiento' },
-  'botox':            { name: 'Botox', type: 'tratamiento', note: 'El PDF no especifica la zona de aplicación.' },
+  'botox':            { name: 'Botox', type: 'tratamiento', note: 'Según la documentación de AGE Clinic (5/11/2026), neuromoduladores del tercio superior.' },
   'hifu':             { name: 'HIFU', type: 'tratamiento' },
   'skinbooster':      { name: 'Skinbooster', type: 'tratamiento' },
   'radiesse':         { name: 'Radiesse', type: 'tratamiento' },
@@ -38,7 +38,10 @@ var TYPES = {
 
 /* Matriz literal. Cada mes: [textoOriginalDelPDF, [[clave, etiquetaLiteral], ...]] o null si la casilla está vacía */
 var PLANS = [
-  { id: 'labios-essential', name: 'Labios Essential', price: '25 €', months: [
+  { id: 'labios-essential', name: 'Labios Essential', price: '25 €',
+    desc: 'Volumen, forma y definición de tus labios con ácido hialurónico, con seguimiento médico durante el año.',
+    annual: { cuotas: 12, club: 300, outside: 540, saving: 240, pct: 44.4 },   // V5.9 · AGECLINIC_Membresias_App.xlsx (Precios)
+    months: [
     ['Ácido en labio', [['acido-labio', 'Ácido en labio']]],
     ['Retoque / revisión', [['retoque-revision', 'Retoque / revisión']]],
     null,
@@ -52,7 +55,10 @@ var PLANS = [
     null,
     ['AGE Gift (goodie, tienda) + Rewards', [['age-gift', 'AGE Gift (goodie, tienda)'], ['rewards', 'Rewards']]]
   ]},
-  { id: 'labios-plus', name: 'Labios Plus', price: '45 €', months: [
+  { id: 'labios-plus', name: 'Labios Plus', price: '45 €',
+    desc: 'Labios y contorno con ácido hialurónico, incluidas las arrugas del código de barras, con dos tratamientos al año.',
+    annual: { cuotas: 12, club: 540, outside: 740, saving: 200, pct: 27.0 },   // V5.9 · AGECLINIC_Membresias_App.xlsx (Precios)
+    months: [
     ['Labio + contorno', [['labio-contorno', 'Labio + contorno']]],
     ['Retoque / revisión', [['retoque-revision', 'Retoque / revisión']]],
     null,
@@ -66,7 +72,10 @@ var PLANS = [
     null,
     ['Mantenimiento + Rewards', [['mantenimiento', 'Mantenimiento'], ['rewards', 'Rewards']]]
   ]},
-  { id: 'botox-essential', name: 'TOX Essential', price: '40 €', months: [
+  { id: 'botox-essential', name: 'TOX Essential', price: '40 €',
+    desc: 'Neuromoduladores en el tercio superior del rostro para suavizar las líneas de expresión sin perder naturalidad.',
+    annual: { cuotas: 12, club: 480, outside: 950, saving: 470, pct: 49.5 },   // V5.9 · AGECLINIC_Membresias_App.xlsx (Precios)
+    months: [
     ['Botox tercio superior', [['botox-tercio', 'Botox tercio superior']]],
     ['Retoque / revisión', [['retoque-revision', 'Retoque / revisión']]],
     null,
@@ -80,7 +89,10 @@ var PLANS = [
     null,
     ['Higiene facial + Rewards', [['higiene-facial', 'Higiene facial'], ['rewards', 'Rewards']]]
   ]},
-  { id: 'botox-plus', name: 'TOX Plus', price: '60 €', months: [
+  { id: 'botox-plus', name: 'TOX Plus', price: '60 €',
+    desc: 'Neuromoduladores del tercio superior combinados con HIFU y cuidado facial.',
+    annual: { cuotas: 12, club: 720, outside: 1279, saving: 559, pct: 43.7 },   // V5.9 · AGECLINIC_Membresias_App.xlsx (Precios)
+    months: [
     ['HIFU', [['hifu', 'HIFU']]],
     ['Retoque / revisión + Botox', [['retoque-revision', 'Retoque / revisión'], ['botox', 'Botox']]],
     null,
@@ -94,7 +106,10 @@ var PLANS = [
     null,
     ['Higiene facial + Rewards', [['higiene-facial', 'Higiene facial'], ['rewards', 'Rewards']]]
   ]},
-  { id: 'skinbooster-glow', name: 'Skinbooster Glow', price: '40 €', months: [
+  { id: 'skinbooster-glow', name: 'Skinbooster Glow', price: '40 €',
+    desc: 'Cuatro sesiones de Skinbooster NCTF al año para la hidratación, la luminosidad y la textura de tu piel.',
+    annual: { cuotas: 12, club: 480, outside: 990, saving: 510, pct: 51.5 },   // V5.9 · AGECLINIC_Membresias_App.xlsx (Precios)
+    months: [
     ['Skinbooster', [['skinbooster', 'Skinbooster']]],
     ['AGE Gift (goodie bag en tienda)', [['age-gift', 'AGE Gift (goodie bag en tienda)']]],
     null,
@@ -108,7 +123,10 @@ var PLANS = [
     null,
     ['Skinbooster + Rewards', [['skinbooster', 'Skinbooster'], ['rewards', 'Rewards']]]
   ]},
-  { id: 'premium', name: 'Premium', price: '200 €', months: [
+  { id: 'premium', name: 'Premium', price: '200 €',
+    desc: 'Nuestra membresía más completa: expresión, labios y calidad de la piel en un solo plan anual.',
+    annual: { cuotas: 12, club: 2400, outside: 3209, saving: 809, pct: 25.2 },   // V5.9 · AGECLINIC_Membresias_App.xlsx (Precios)
+    months: [
     ['Radiesse + valoración', [['radiesse', 'Radiesse'], ['valoracion', 'Valoración']]],
     ['HIFU', [['hifu', 'HIFU']]],
     ['Botox', [['botox', 'Botox']]],
@@ -123,6 +141,12 @@ var PLANS = [
     ['AGE Gift + Rewards', [['age-gift', 'AGE Gift'], ['rewards', 'Rewards']]]
   ]}
 ];
+
+/* V5.9 · desc: descripción breve de la ficha, adaptada de los textos comerciales de AGE Clinic (Textos_app).
+   annual: comparativa anual facilitada por AGE Clinic (hoja Precios, 05/11/2026): total del club (12 cuotas),
+   tarifa fuera del club del mismo conjunto de servicios, ahorro y descuento (ahorro / tarifa fuera del club).
+   La distribución por meses (months) NO se ha cambiado: es el recorrido aprobado. Las diferencias con el calendario
+   del Excel están en el README, pendientes de confirmar. */
 
 /* V5.6 · Nomenclatura comercial: la categoría «Bótox» pasa a «TOX» (TOX Essential, TOX Plus) por indicación del cliente.
    Los nombres de tratamiento del PDF («Botox tercio superior», «Botox») se mantienen. Los ids internos no cambian. */
@@ -162,22 +186,27 @@ var GENERAL_NOTIFS = [
   { i: 'user',  t: 'Tus avisos personales', x: 'Los recordatorios de citas y beneficios aparecen después de iniciar sesión.', go: 'login' }
 ];
 
-/* V5.8 · Tratamientos individuales con precio de socio (decisión 4/11/2026).
-   PRECIOS DE DEMOSTRACIÓN: ningún documento de AGE Clinic los define. Se muestran siempre con la etiqueta «Precios DEMO».
-   regular: precio habitual · member: precio con cualquier membresía activa. El ahorro se calcula en la app.
-   Para cambiar un precio, edítalo aquí; para retirar un tratamiento de la lista, bórralo. */
+/* V5.9 · Tratamientos individuales con tarifa de socio — DATOS DE AGE CLINIC
+   Fuente: AGECLINIC_Tratamientos_Individuales_Club.xlsx (catálogo acordado el 05/11/2026). Sustituye a los precios DEMO de la V5.8.
+   name: nombre comercial del catálogo · regular: tarifa fuera del club · member: tarifa de miembro (socios con una membresía activa).
+   El ahorro y el descuento se calculan en la app (descuento sobre la tarifa fuera del club; no es un porcentaje uniforme).
+   desc / cond: textos breves del propio documento, solo donde los da. key: clave del catálogo (fichas y recorrido). */
 var SINGLES = {
-  status: 'demo',
+  status: 'cliente',
+  source: 'AGECLINIC_Tratamientos_Individuales_Club.xlsx · 05/11/2026',
+  note: 'Tarifa de miembro reservada a socios con una membresía activa. Servicios adicionales a su plan. Tratamientos sujetos a valoración médica.',
   items: [
-    { key: 'acido-labio',      regular: 280, member: 238 },
-    { key: 'labios-contorno',  regular: 390, member: 330 },
-    { key: 'botox-tercio',     regular: 300, member: 255 },
-    { key: 'hifu',             regular: 450, member: 380 },
-    { key: 'skinbooster',      regular: 250, member: 210 },
-    { key: 'radiesse',         regular: 520, member: 440 },
-    { key: 'polinucleotidos',  regular: 290, member: 245 },
-    { key: 'peeling-higiene',  regular: 95,  member: 80 },
-    { key: 'higiene-facial',   regular: 75,  member: 64 }
+    { key: 'hifu',            name: 'HIFU Ultraformer · por zona',  regular: 199, member: 160,
+      desc: 'Ultrasonidos focalizados de uso médico para trabajar la firmeza de la zona seleccionada.',
+      cond: 'Zonas: rostro, papada o cuello. Precio por zona y sesión, bajo valoración profesional.' },
+    { key: 'botox-tercio',    name: 'TOX · tercio superior',        regular: 380, member: 300 },
+    { key: 'acido-labio',     name: 'Labios con ácido hialurónico', regular: 250, member: 190 },
+    { key: 'labios-contorno', name: 'Labios + contorno',            regular: 290, member: 240 },
+    { key: 'radiesse',        name: 'Radiesse · 1,5 ml',            regular: 450, member: 380 },
+    { key: 'higiene-facial',  name: 'Higiene facial profesional',   regular: 130, member: 100 },
+    { key: 'skinbooster',     name: 'Skinbooster · mesoterapia NCTF', regular: 200, member: 170 },
+    { key: 'polinucleotidos', name: 'Polinucleótidos',              regular: 250, member: 190,
+      desc: 'Fragmentos purificados de ADN aplicados mediante microinyecciones para mejorar la hidratación, la textura y la elasticidad de la piel.' }
   ]
 };
 
@@ -193,13 +222,14 @@ var CATEGORIES = [
    Para añadir una promoción, añade un objeto; para retirarla, cambia status a 'retirada' o bórrala.
    status: 'ejemplo' (se muestra marcada como ejemplo) | 'aprobada' | 'retirada' (no se muestra).
    key: clave del catálogo; la app la cruza con el plan activo para indicar si el tratamiento ya está incluido.
-   price.regular / price.member: importe en euros o null (sin confirmar). V5.8: si son null, la app muestra el precio DEMO del tratamiento en SINGLES.
+   price.regular / price.member: importe en euros o null (sin confirmar). V5.9: si son null, la app muestra la tarifa del catálogo individual de AGE Clinic (SINGLES).
    plans: 'all' o lista de ids de plan a los que se ofrece. validFrom / validTo: 'AAAA-MM-DD' o null. */
 var PROMOS = [
   { id: 'hifu', status: 'ejemplo', key: 'hifu', name: 'HIFU', summary: null,
     image: { src: 'img/promo-hifu.jpg', alt: 'Profesional realizando un tratamiento con aparatología en una cabina de AGE Clinic', source: 'DSCF0282.jpeg' },
     price: { regular: null, member: null }, conditions: [], plans: 'all', validFrom: null, validTo: null },
-  { id: 'peeling', status: 'ejemplo', key: 'peeling-higiene', name: 'Peeling / higiene', summary: null,
+  /* V5.9 · el ejemplo «Peeling / higiene» no está en el catálogo individual de AGE Clinic: pasa a «Higiene facial profesional», que sí lo está */
+  { id: 'peeling', status: 'ejemplo', key: 'higiene-facial', name: 'Higiene facial profesional', summary: null,
     image: { src: 'img/promo-peel.jpg', alt: 'Aplicación de un producto con pincel sobre la piel de un paciente', source: 'DSCF9956.jpeg' },
     price: { regular: null, member: null }, conditions: [], plans: 'all', validFrom: null, validTo: null },
   { id: 'labios', status: 'ejemplo', key: 'labios-contorno', name: 'Labios + contorno', summary: null,

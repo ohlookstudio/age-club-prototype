@@ -284,14 +284,19 @@ function glyph(type, st, size) {
 function pill(st) { return '<span class="pill st-' + ST[st].c + '">' + ST[st].l + '</span>'; }
 function tbd(t) { return '<span class="tbd">' + esc(t || 'Por confirmar') + '</span>'; }
 var DEMO_TAG = '<span class="demo-tag">DEMO</span>';
-/* V5.8 · Tratamientos individuales con precio de socio (decisión 4/11/2026). Precios DEMO en data.js (SINGLES). */
+/* V5.8 · Tratamientos individuales con precio de socio (decisión 4/11/2026).
+   V5.9 · Tarifas oficiales de AGE Clinic en data.js (SINGLES); el descuento se muestra con un decimal, como en la documentación del cliente. */
 var SINGLE = {}; SINGLES.items.forEach(function (x) { SINGLE[x.key] = x; });
-function eur(n) { return n.toLocaleString('es-ES') + ' €'; }
-function saving(x) { return { abs: x.regular - x.member, pct: Math.round((x.regular - x.member) / x.regular * 100) }; }
-function priceTrio(x, big) {
-  var sv = saving(x);
-  return '<span class="ptrio' + (big ? ' big' : '') + '"><span class="pt-reg"><span class="pt-l">Habitual</span><s>' + eur(x.regular) + '</s></span><span class="pt-mem"><span class="pt-l">Socios</span><b>' + eur(x.member) + '</b></span><span class="pt-save">Ahorras ' + eur(sv.abs) + ' · −' + sv.pct + ' %</span></span>';
+function eur(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €'; }   // V5.9: separador de miles también con 4 cifras (3.209 €), como en la documentación
+function pct1(n) { return n.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' %'; }
+function saving(x) { return { abs: x.regular - x.member, pct: Math.round((x.regular - x.member) / x.regular * 1000) / 10 }; }
+/* l: etiquetas [precio de referencia, precio con el club, sufijo]; por defecto, tratamiento individual. */
+function priceTrio(x, big, l) {
+  var sv = saving(x); l = l || ['Habitual', 'Socios', ''];
+  return '<span class="ptrio' + (big ? ' big' : '') + '"><span class="pt-reg"><span class="pt-l">' + l[0] + '</span><s>' + eur(x.regular) + l[2] + '</s></span><span class="pt-mem"><span class="pt-l">' + l[1] + '</span><b>' + eur(x.member) + l[2] + '</b></span><span class="pt-save">Ahorras ' + eur(sv.abs) + ' · −' + pct1(sv.pct) + '</span></span>';
 }
+/* V5.9 · Comparativa anual de una membresía (AGE Clinic): tarifa fuera del club del mismo conjunto de servicios frente a 12 cuotas. */
+function planSaving(pid, big) { var a = PLAN[pid].annual; return a ? priceTrio({ regular: a.outside, member: a.club }, big, ['Fuera del club', 'Con el club', '/año']) : ''; }
 
 var ICON = {
   back: '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.25 6l-6 6 6 6"></path></svg>',
@@ -481,14 +486,14 @@ SCR.inicio = function () {
 function singlesList(limit) {
   var xs = SINGLES.items.slice(0, limit || SINGLES.items.length);
   return '<div class="slist">' + xs.map(function (x) {
-    return '<button class="srow" ' + go('tratamiento', { key: x.key }) + '><span class="srow-t"><span class="srow-n">' + esc(CATALOG[x.key].name) + '</span>' + priceTrio(x) + '</span>' + ICON.chev + '</button>';
+    return '<button class="srow" ' + go('tratamiento', { key: x.key }) + '><span class="srow-t"><span class="srow-n">' + esc(x.name) + '</span>' + priceTrio(x) + '</span>' + ICON.chev + '</button>';
   }).join('') + '</div>';
 }
 function inicioVisitante() {
   var h = '<div class="h-head">' + photo('membresias') + '<div class="h-in"><div class="top-row">' + avatar() + '<button class="icon-btn" ' + go('notificaciones') + ' aria-label="Notificaciones">' + ICON.bell + '</button></div><p class="hello">Hola, ' + esc(S.user.nombre) + '</p><h1>Elige tu <b>membresía</b>.</h1></div></div><div class="home">';
   h += '<p class="lead" style="margin-top:-8px">Cada membresía ordena tus tratamientos, revisiones y beneficios en un recorrido de 12 meses que empieza el día que la activas.</p>' + catList();
-  h += '<p class="fine">Precios mensuales. Duración, permanencia y renovación por confirmar.</p>';
-  h += '<div class="h-sec"><h2>Tratamientos individuales</h2><span class="demo-tag">Precios DEMO</span></div><p class="fine" style="margin-top:-6px">Con cualquier membresía activa pagas el precio de socio.</p>' + singlesList();
+  h += '<p class="fine">Membresías anuales en 12 cuotas mensuales. Permanencia y renovación por confirmar.</p>';
+  h += '<div class="h-sec"><h2>Tratamientos individuales</h2></div><p class="fine" style="margin-top:-6px">Con cualquier membresía activa pagas la tarifa de socio. Tratamientos sujetos a valoración médica.</p>' + singlesList();
   h += '<div class="list">' + lrow('Ver todos los tratamientos', 'Qué incluye cada plan', go('tratamientos')) + '</div>';
   return { html: h + '</div>' };
 }
@@ -528,7 +533,7 @@ function catList() {
 }
 SCR.membresias = function () {
   var h = nav('Membresías') + '<div class="body"><div class="stack"><h1>¿Qué quieres <b>cuidar</b>?</h1><p class="lead">Elige una categoría para ver sus planes.</p></div>' + catList();
-  h += '<p class="fine">Precios mensuales. Duración, permanencia y renovación por confirmar.' + (S.auth ? '' : ' Puedes explorar sin cuenta; para activar una membresía te pediremos crear una cuenta o iniciar sesión.') + '</p>';
+  h += '<p class="fine">Membresías anuales en 12 cuotas mensuales. Permanencia y renovación por confirmar.' + (S.auth ? '' : ' Puedes explorar sin cuenta; para activar una membresía te pediremos crear una cuenta o iniciar sesión.') + '</p>';
   return { html: h + '</div>' };
 };
 function incName(k, n) { return esc(CATALOG[k].name) + (n > 1 ? ' <span class="inc-x">×' + n + '</span>' : ''); }
@@ -540,7 +545,7 @@ SCR.categoria = function (pp) {
   h += '<div class="stack">' + c.plans.map(function (pid, i) {
     var p = PLAN[pid], mine = memByPlan(pid) ? '<span class="tag">Tu plan</span>' : '';
     var own = Object.keys(cnt[i]).filter(function (k) { return common.indexOf(k) < 0; });
-    return '<button class="mod" ' + go('plan', { id: pid }) + '><span class="mod-h"><span class="mod-n">' + esc(p.name) + mine + '</span><span class="mod-p">' + priceM(pid) + '</span></span>' +
+    return '<button class="mod" ' + go('plan', { id: pid }) + '><span class="mod-h"><span class="mod-n">' + esc(p.name) + mine + '</span><span class="mod-p">' + priceM(pid) + '</span></span>' + (p.annual ? '<span class="mod-save">Ahorras ' + eur(p.annual.saving) + ' al año · −' + pct1(p.annual.pct) + '</span>' : '') +
       '<span class="eyebrow">Además incluye</span><span class="mod-list">' + own.map(function (k) { return '<span class="mod-i">' + glyph(CATALOG[k].type, null, 16) + '<span>' + incName(k, cnt[i][k]) + '</span></span>'; }).join('') + '</span>' +
       '<span class="mod-go">Ver plan' + ICON.chev + '</span></button>';
   }).join('') + '</div>';
@@ -560,7 +565,9 @@ function accSec(id, title, meta, body) {
 }
 SCR.plan = function (pp) {
   var p = PLAN[pp.id], k = counts(p.id), mine = !!memByPlan(p.id), cat = catOf(p.id), prem = p.id === 'premium';
-  var h = nav(p.name, { over: true }) + '<div class="hero">' + img(PHOTOS.cat[cat.id], '', PHOTOS.cat[cat.id][3]) + '</div><div class="body sheetbody"><div><span class="kicker">Membresía · ' + cat.name + (mine ? ' · tu plan actual' : '') + '</span><h1 style="margin-top:10px">' + esc(p.name) + '</h1><div class="price">' + priceM(p.id) + '</div><p class="lead" style="margin-top:8px">Recorrido de 12 meses desde la activación.</p></div>';
+  var h = nav(p.name, { over: true }) + '<div class="hero">' + img(PHOTOS.cat[cat.id], '', PHOTOS.cat[cat.id][3]) + '</div><div class="body sheetbody"><div><span class="kicker">Membresía · ' + cat.name + (mine ? ' · tu plan actual' : '') + '</span><h1 style="margin-top:10px">' + esc(p.name) + '</h1><div class="price">' + priceM(p.id) + '</div><p class="lead" style="margin-top:8px">' + esc(p.desc || 'Recorrido de 12 meses desde la activación.') + '</p></div>';
+  /* V5.9 · Comparativa anual facilitada por AGE Clinic: tarifa del mismo conjunto de servicios fuera del club, 12 cuotas y ahorro. */
+  if (p.annual) h += '<section class="pbox"><div class="sec-h"><span class="lbl">Tu año en el club</span><span class="fine">12 cuotas</span></div>' + planSaving(p.id) + '<p class="fine">Comparativa anual del mismo conjunto de servicios con la tarifa fuera del club.</p></section>';
   h += '<div class="stats">' + ['tratamiento', 'revision', 'regalo', 'recompensa'].map(function (t) {
     return '<div class="stat">' + glyph(t, null, 18) + '<b>' + (t === 'recompensa' ? (k[t] ? 'Sí' : '—') : k[t]) + '</b><span>' + (t === 'recompensa' ? 'Rewards' : TYPES[t].plural) + '</span></div>';
   }).join('') + '</div>';
@@ -570,11 +577,11 @@ SCR.plan = function (pp) {
     return '<div class="plist-r' + (mo ? '' : ' off') + '"><span class="plist-m">Mes ' + (i + 1) + '</span><span class="plist-c">' +
       (mo ? monthComps(p.id, i + 1).map(function (c) { return '<span class="plist-i">' + glyph(c.type, null, 16) + esc(c.label) + '</span>'; }).join('') : '<span class="muted">Sin actividades</span>') + '</span></div>';
   }).join('') + '</div>' + (S.auth ? '<button class="link" ' + act('previewRec', p.id) + '>Ver en Mi recorrido</button>' : '');
-  var cond = '<dl class="dl">' + [['Importe', priceM(p.id) + ' (según documento)'], ['Periodicidad del pago', 'Mensual'], ['Duración, permanencia y renovación', tbd()], ['Cuándo se reserva cada mes', tbd('Hipótesis: al empezar el mes')], ['Cambio de plan', 'No disponible. Puedes cancelar esta membresía y contratar otra, o tener dos a la vez'], ['Cancelación', tbd()], ['Descripción clínica de cada servicio', tbd('Pendiente de AGE Clinic')]].map(function (r) { return '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>'; }).join('') + '</dl>';
+  var cond = '<dl class="dl">' + [['Importe', priceM(p.id) + (p.annual ? ' · ' + eur(p.annual.club) + '/año' : '')], ['Duración y pago', 'Membresía anual, en 12 cuotas mensuales'], ['Permanencia y renovación', tbd()], ['Valoración médica', 'Los tratamientos están sujetos a valoración médica'], ['Cuándo se reserva cada mes', tbd('Hipótesis: al empezar el mes')], ['Cambio de plan', 'No disponible. Puedes cancelar esta membresía y contratar otra, o tener dos a la vez'], ['Cancelación', tbd()], ['Descripción clínica de cada servicio', tbd('Pendiente de AGE Clinic')]].map(function (r) { return '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>'; }).join('') + '</dl>';
   h += '<div class="accs">' + accSec('trat', 'Tratamientos incluidos', plural(k.tratamiento, 'tratamiento', 'tratamientos'), incRows(p.id, ['tratamiento'])) +
     accSec('rev', 'Revisiones y beneficios', plural(nb, 'elemento', 'elementos'), incRows(p.id, ['revision', 'regalo', 'recompensa'])) +
     accSec('rec', 'Recorrido de 12 meses', plural(k.activos, 'mes con actividad', 'meses con actividad'), rec) +
-    accSec('cond', 'Condiciones', 'Importe mensual · resto por confirmar', cond) + '</div></div>';
+    accSec('cond', 'Condiciones', '12 cuotas · permanencia por confirmar', cond) + '</div></div>';
   var lab = prem ? 'Lo quiero todo' : 'Elegir esta membresía', cta;
   if (!S.auth) cta = btn(lab, go('registro', { plan: p.id }), 'btn-dark btn-block');
   else if (!S.mems.length) cta = btn(lab, go('activar', { id: p.id }), 'btn-dark btn-block');
@@ -588,10 +595,10 @@ SCR.plan = function (pp) {
 SCR.activar = function (pp) {
   var p = PLAN[pp.id], t = today();
   var first = monthComps(p.id, 1).map(function (c) { return c.label; }).join(' + ');
-  var h = nav('Activar membresía', { close: true }) + '<div class="body"><div><span class="kicker">Resumen de tu membresía</span><h1 style="margin-top:10px">' + esc(p.name) + '</h1><div class="price">' + priceM(p.id) + '</div></div>';
+  var h = nav('Activar membresía', { close: true }) + '<div class="body"><div><span class="kicker">Resumen de tu membresía</span><h1 style="margin-top:10px">' + esc(p.name) + '</h1><div class="price">' + priceM(p.id) + '</div>' + (p.annual ? '<p class="fine" style="margin-top:4px">12 cuotas · ' + eur(p.annual.club) + ' al año</p>' : '') + '</div>';
   h += '<dl class="dl"><div><dt>Inicio del ciclo</dt><dd>Hoy, ' + fDate(t) + ' ' + DEMO_TAG + '</dd></div><div><dt>Mes 1</dt><dd>' + esc(first) + '</dd></div><div><dt>Mes 12</dt><dd>' + fMY(addM(t, 11)) + ' · ' + esc(p.months[11][0]) + '</dd></div><div><dt>Titular</dt><dd>' + esc(S.user.nombre + ' ' + S.user.apellidos) + '</dd></div><div><dt>Móvil</dt><dd>' + (S.user.telefono ? esc(S.user.telefono) : '—') + '</dd></div><div><dt>Pago</dt><dd>' + tbd('No se simula el pago') + '</dd></div></dl>';
   if (S.mems.length) h += notice('<b>Se suma a tu ' + esc(memNames()) + '.</b> No la sustituye: cada membresía tiene su propio recorrido de 12 meses, sus citas y sus beneficios. Cómo se cobran dos cuotas está por confirmar.', 'plain');
-  h += notice('Importe mensual según el documento de AGE Clinic. Duración, permanencia y renovación por confirmar. Esta activación solo crea tu recorrido en el prototipo.');
+  h += notice('Membresía anual de 12 cuotas, según AGE Clinic. Permanencia y renovación por confirmar. Esta activación solo crea tu recorrido en el prototipo.');
   /* V5.8 · El móvil es obligatorio para contratar. Las cuentas creadas en V5.8 ya lo tienen; si faltara, se pide aquí. */
   if (!S.user.telefono) { var pe = (S.ui.errs || {}).movil; h += '<div class="field' + (pe ? ' err' : '') + '"><label for="f-movil">Móvil <span class="req">obligatorio</span></label><input id="f-movil" type="tel" inputmode="tel" autocomplete="tel" value="' + esc((S.ui.form || {}).movil || '') + '"' + (pe ? ' aria-invalid="true" aria-describedby="e-movil"' : '') + '>' + (pe ? '<span class="ferr" id="e-movil">' + pe + '</span>' : '<span class="fhint">Para avisos de tus citas. Formato por confirmar.</span>') + '</div>'; }
   var pr = S.ui.promo || {};
@@ -936,7 +943,7 @@ SCR.tratamientos = function () {
         var top = PRIO.filter(function (st) { return sts.indexOf(st) > -1; })[0];
         if (occ.length > 1) title += ' <span class="inc-x">×' + occ.length + '</span>';
         sub = pill(top);
-      } else if (SINGLE[k]) sub = '<span class="lprice">' + eur(SINGLE[k].regular) + ' · <b>socios ' + eur(SINGLE[k].member) + '</b> ' + DEMO_TAG + '</span>';   // V5.8: precio visible en la lista
+      } else if (SINGLE[k]) sub = '<span class="lprice">' + eur(SINGLE[k].regular) + ' · <b>socios ' + eur(SINGLE[k].member) + '</b></span>';   // V5.8: precio visible en la lista (V5.9: tarifa de AGE Clinic)
       h += lrow(title, sub, go('tratamiento', { key: k }), glyph(t, null, 20));
     });
     h += '</div></section>';
@@ -946,13 +953,13 @@ SCR.tratamientos = function () {
 SCR.tratamiento = function (pp) {
   var k = pp.key, cat = CATALOG[k];
   var h = nav(cat.name, { over: true }) + '<div class="hero short">' + img(PHOTOS.tipo[cat.type]) + '</div><div class="body sheetbody"><div class="stack"><span class="kicker">' + TYPES[cat.type].label + '</span><h1>' + esc(cat.name) + '</h1></div>';
-  h += '<p class="placeholder">Descripción clínica pendiente de AGE Clinic.</p>';
+  h += SINGLE[k] && SINGLE[k].desc ? '<p class="lead">' + esc(SINGLE[k].desc) + '</p>' : '<p class="placeholder">Descripción clínica pendiente de AGE Clinic.</p>';   // V5.9: descripción del catálogo de AGE Clinic cuando existe
   if (cat.note) h += notice(esc(cat.note));
   h += clinical(cat.type) ? '<div class="pend-block"><span class="lbl">Duración, preparación y recuperación</span><p>AGE Clinic completará aquí la información clínica del tratamiento.</p></div>' : '<dl class="dl">' + [['Cómo se canjea', 'Lo recoges en AGE Clinic y el equipo lo registra como canjeado'], ['Dónde', cat.key === 'age-gift' ? 'Tienda de AGE Clinic (según documento)' : 'AGE Clinic']].map(function (r) { return '<div><dt>' + r[0] + '</dt><dd>' + r[1] + '</dd></div>'; }).join('') + '</dl>';
   var sg = SINGLE[k];
   if (sg) {   // V5.8 · precio individual: habitual, socio y ahorro (DEMO)
-    h += '<section class="pbox"><div class="sec-h"><span class="lbl">Tratamiento individual</span><span class="demo-tag">Precios DEMO</span></div>' + priceTrio(sg, true) +
-      '<p class="fine">' + (S.mems.length ? 'Tienes precio de socio por tu membresía activa.' : 'Precio de socio con cualquier membresía activa de AGE Club.') + ' Condiciones por confirmar con AGE Clinic.</p>' +
+    h += '<section class="pbox"><div class="sec-h"><span class="lbl">' + esc(sg.name) + '</span></div>' + priceTrio(sg, true) + (sg.cond ? '<p class="fine">' + esc(sg.cond) + '</p>' : '') +
+      '<p class="fine">' + (S.mems.length ? 'Tienes tarifa de socio por tu membresía activa.' : 'Tarifa de socio con cualquier membresía activa de AGE Club.') + ' Servicio adicional a tu plan, sujeto a valoración médica.</p>' +
       (S.auth ? (S.promoReqs['t-' + k] ? btn(ICON.tick + 'Solicitud enviada · simulación', 'disabled', 'btn-block') : btn('Solicitar cita', act('sheet', 'single:' + k), 'btn-dark btn-block')) : btn('Crear cuenta para solicitarlo', go('registro'), 'btn-block')) + '</section>';
   }
   if (S.mems.length) {
@@ -1147,19 +1154,19 @@ SCR.socios = function () {
   if (!ps.length) return { html: h + empty('Sin promociones por ahora', 'Cuando AGE Clinic publique una promoción para socios, aparecerá aquí.', btn('Volver a inicio', act('toTab', 'inicio'))) + '</div>' };
   h += '<div class="pcards">' + ps.map(function (pr) {
     var pp = promoPrice(pr), sv = pp ? saving(pp) : null;
-    return '<button class="pcard" ' + go('promo', { id: pr.id }) + '>' + img([pr.image.src, pr.image.alt]) + (sv ? '<span class="pcard-badge">−' + sv.pct + ' %</span>' : '') + '<span class="pcard-b"><span class="pcard-n">' + esc(pr.name) + '</span><span class="pcard-s">' + promoRelText(pr) + '</span>' + (pp ? priceTrio(pp) : '') + '<span class="pcard-f"><span class="demo-tag">' + (pr.status === 'ejemplo' ? 'Ejemplo' : '') + (pp && pp.demo ? ' · precios DEMO' : '') + '</span><span class="link" style="min-height:0;padding:0">Ver promoción</span></span></span></button>';
+    return '<button class="pcard" ' + go('promo', { id: pr.id }) + '>' + img([pr.image.src, pr.image.alt]) + (sv ? '<span class="pcard-badge">−' + pct1(sv.pct) + '</span>' : '') + '<span class="pcard-b"><span class="pcard-n">' + esc(pr.name) + '</span><span class="pcard-s">' + promoRelText(pr) + '</span>' + (pp ? priceTrio(pp) : '') + '<span class="pcard-f"><span class="demo-tag">' + (pr.status === 'ejemplo' ? 'Ejemplo' : '') + '' + '</span><span class="link" style="min-height:0;padding:0">Ver promoción</span></span></span></button>';
   }).join('') + '</div>';
-  h += '<div class="h-sec"><h2>Todos los tratamientos individuales</h2><span class="demo-tag">Precios DEMO</span></div>' + singlesList() + '<p class="fine">Precio de socio con tu membresía activa. Condiciones y compatibilidad con los códigos de descuento por confirmar.</p>';
+  h += '<div class="h-sec"><h2>Todos los tratamientos individuales</h2></div>' + singlesList() + '<p class="fine">' + esc(SINGLES.note) + ' Compatibilidad con los códigos de descuento por confirmar.</p>';
   return { html: h + '</div>' };
 };
 SCR.promo = function (pp) {
   var pr = promoById(pp.id), r = promoRel(pr), pn = r.inc ? PLAN[r.plan].name : (S.mems.length ? memNames() : 'plan'), sent = S.promoReqs[pr.id];
-  var h = nav(pr.name, { over: true, right: pr.status === 'ejemplo' ? '<span class="over-tag">Ejemplo</span>' : '' }) + '<div class="hero">' + img([pr.image.src, pr.image.alt]) + '</div><div class="body sheetbody"><div class="stack"><span class="kicker">Exclusivo para socios</span><h1>' + esc(pr.name) + '</h1><p class="placeholder">' + (pr.summary ? esc(pr.summary) : 'Descripción pendiente de AGE Clinic.') + '</p></div>';
+  var h = nav(pr.name, { over: true, right: pr.status === 'ejemplo' ? '<span class="over-tag">Ejemplo</span>' : '' }) + '<div class="hero">' + img([pr.image.src, pr.image.alt]) + '</div><div class="body sheetbody"><div class="stack"><span class="kicker">Exclusivo para socios</span><h1>' + esc(pr.name) + '</h1><p class="placeholder">' + (pr.summary ? esc(pr.summary) : SINGLE[pr.key] && SINGLE[pr.key].desc ? esc(SINGLE[pr.key].desc) : 'Descripción pendiente de AGE Clinic.') + '</p></div>';
   h += r.inc ? '<div class="prel inc">' + ICON.info + '<div><b>Incluido en tu ' + esc(pn) + ' · ' + monthsText(r.months) + '</b>Esta promoción sería aparte de lo incluido en tu plan. Su compatibilidad está pendiente de validar con AGE Clinic.</div></div>'
     : '<div class="prel add">' + ICON.spark + '<div><b>Adicional a tu ' + esc(pn) + '</b>No forma parte de tu membresía ni de tu recorrido de 12 meses.</div></div>';
   /* V5.8 · El descuento de socio se presenta de forma visible (antes: bloque «Precio y condiciones · DEMO» vacío). */
   var ppx = promoPrice(pr);
-  if (ppx) h += '<section class="pbox"><div class="sec-h"><span class="lbl">Tu precio de socio</span>' + (ppx.demo ? '<span class="demo-tag">Precios DEMO</span>' : '') + '</div>' + priceTrio(ppx, true) + '</section>';
+  if (ppx) h += '<section class="pbox"><div class="sec-h"><span class="lbl">Tu tarifa de socio</span></div>' + priceTrio(ppx, true) + (SINGLE[pr.key] && SINGLE[pr.key].cond ? '<p class="fine">' + esc(SINGLE[pr.key].cond) + '</p>' : '') + '</section>';
   if (pr.conditions.length) h += '<section class="sec"><h2>Condiciones</h2><ul class="conds">' + pr.conditions.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></section>';
   else h += '<p class="fine">Condiciones de la promoción pendientes de AGE Clinic.</p>';
   h += '</div><div class="foot">' + (sent ? btn(ICON.tick + 'Solicitud enviada · simulación', 'disabled', 'btn-block') : btn('Solicitar cita', act('sheet', 'promo:' + pr.id), 'btn-dark btn-block')) + '</div>';
